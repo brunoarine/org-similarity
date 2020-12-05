@@ -5,8 +5,8 @@
 ** Dependencies
 
  - Python 3
- - =scikit-learn=
- - =nltk=
+ - [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] 
+ - [[https://github.com/nltk/nltk][nltk]] 
 
  To ensure you have the latest packages, run:
  #+begin_src
@@ -49,9 +49,25 @@ You now have the repository cloned in =~/projects/org-similarity/=. Now paste th
 
 You can also copy =org-similarity/= somewhere where load-path can access it, but you’d have to update the file manually.
 
+** Configuration
+
+There are a few variables that can be set to customize how =org-similarity= operates and generates the list of similar documents:
+
+#+begin_src elisp
+;; directory to scan for possibly similar documents.
+;; org-roam users might want to change it to org-roam-directory
+(setq org-similarity-directory org-directory)
+;; the language passed to nltk's Snowball stemmer
+(setq org-similarity-language "english")
+;; how many similar entries to list at the end of the buffer
+(setq org-similarity-number-of-documents 10)
+;; whether to prepend the list entries with their cosine similarity score
+(setq org-similarity-show-scores nil)
+#+end_src
+
 ** Usage
 
-Use =M-x org-similarity-insert-list RET= to insert a list of links containing related files from a directory.
+Use =M-x org-similarity-insert-list RET= to insert a list of =org-mode= links to similar files at the end of your current buffer.
 
 ** License
 

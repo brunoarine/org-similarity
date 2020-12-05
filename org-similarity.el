@@ -43,9 +43,11 @@
 
 (defvar org-similarity-language "english")
 
-(defvar org-similarity-list-size 10)
+(defvar org-similarity-number-of-documents 10)
 
-(defvar org-similarity-directory org-roam-directory)
+(defvar org-similarity-directory org-directory)
+
+(defvar org-similarity-show-scores nil)
 
 (defvar org-similarity-root
   (concat (file-name-directory
@@ -58,10 +60,14 @@
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
   (end-of-buffer)
-  (let ((command (format "python3 %s -i %s -d %s"
+  (newline)
+  (let ((command (format "python3 %s -i %s -d %s -l %s -n %s %s"
                          (concat org-similarity-root "/assets/org-similarity.py")
                          buffer-file-name
-                         org-similarity-directory)))
+                         org-similarity-directory
+                         org-similarity-language
+                         org-similarity-number-of-documents
+                         (if org-similarity-show-scores "--score" ""))))
     (insert (shell-command-to-string command)))
   (pop-global-mark)
   )

@@ -13,14 +13,66 @@ STOPWORDS = "stopwords.txt"
 JUNKCHARS = "junkchars.txt"
 
 
+def cmdline_args():
+    """ Make parser object """
+    p = argparse.ArgumentParser()
+    p.add_argument(
+        "--input_filename",
+        "-i",
+        type=str,
+        help="input filename",
+        required=True
+    )
+    p.add_argument(
+        "--directory",
+        "-d",
+        type=str,
+        help="directory of files to search",
+        required=True
+    )
+    p.add_argument(
+        "--number",
+        "-n",
+        type=int,
+        default=10,
+        help="number of similar documents (default: 10)",
+        required=False
+    )
+    p.add_argument(
+        "--language",
+        "-l",
+        type=str,
+        default="english",
+        help="nltk's SnowballStemmer language (default: english)",
+        required=False
+    )
+    p.add_argument(
+        "--score",
+        "-s",
+        type=bool,
+        default=False,
+        help="show cosine similarity score (default: False)",
+        required=False
+    )
+    return p.parse_args()
+
+
 def read_file(filename):
     """ Safely reads a filename and returns its content."""
     with open(filename, "r") as open_file:
         return open_file.read()
 
 
+args = cmdline_args()
+input_filename = args.input_filename
+directory = args.directory
+number_of_documents = args.number
+language = args.language
+show_score = args.score
+
+
 # TODO add command line option to switch language
-stemmer = SnowballStemmer("english").stem
+stemmer = SnowballStemmer(language).stem
 
 # Fetches filenames in the same directory of the script
 stopwords = open(os.path.join(sys.path[0], STOPWORDS), "r").read().split("\n")
@@ -82,42 +134,29 @@ def tfidf_similarity(input_filename, target_filenames):
     return cosine_similarities
 
 
-def cmdline_args():
-    """ Make parser object """
-    p = argparse.ArgumentParser()
-    p.add_argument(
-        "--input_filename", "-i", type=str, help="input filename", required=True
-    )
-    p.add_argument(
-        "--directory",
-        "-d",
-        type=str,
-        help="directory of files to search",
-        required=True,
-    )
-    return p.parse_args()
-
 
 def main():
     """Main function"""
-    args = cmdline_args()
-    input_filename = args.input_filename
-    directory = args.directory
 
     target_filenames = [filename for filename in glob.iglob(directory + "*.org")]
 
     cosine_similarities = tfidf_similarity(input_filename, target_filenames)
 
-    for pair in cosine_similarities[1:10]:
+    for pair in cosine_similarities[1:number_of_documents+1]:
         i = pair[0]
         similar_score = pair[1]
-        # org-mode links to files in the same folder don't contain the full path
-        similar_filename = target_filenames[i].replace(directory, "")
-        similar_title = open(similar_filename, "r").readline()
+        similar_title = open(target_filenames[i], "r").readline()
         similar_title = similar_title.replace("#+TITLE: ", "")[:-1]  # strip \n
-        message = "{:.2f} [[file:{}][{}]]".format(
-            similar_score, similar_filename, similar_title
-        )
+        # strip the full path from similar_filename, since org-mode links to
+        # files in the same folder don't contain the full path
+        similar_filename = target_filenames[i].replace(directory, "")
+        if show_score:
+            message = "{:.2f} [[file:{}][{}]]".format(similar_score,
+                                                      similar_filename,
+                                                      similar_title)
+        else:
+            message = "[[file:{}][{}]]".format(similar_filename,
+                                               similar_title)
         print(message)
 
 
