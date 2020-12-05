@@ -47,11 +47,23 @@
 
 (defvar org-similarity-directory org-roam-directory)
 
+(defvar org-similarity-root
+  (concat (file-name-directory
+           (f-full (or
+                    load-file-name
+                    buffer-file-name)))
+          "."))
+
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
-(let ((command (format "python3 /assets/org-similarity.py -i %s -d %s" buffer-file-name org-similarity-directory)))
-  (insert (shell-command-to-string command)))
+  (end-of-buffer)
+  (let ((command (format "python3 %s -i %s -d %s"
+                         (concat org-similarity-root "/assets/org-similarity.py")
+                         buffer-file-name
+                         org-similarity-directory)))
+    (insert (shell-command-to-string command)))
+  (pop-global-mark)
   )
 
 (provide 'org-similarity)
