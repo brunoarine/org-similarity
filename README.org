@@ -1,0 +1,3 @@
+* org-similarity
+
+A package to help org-mode/org-roam users discover similar or related notes. It uses Python and the excellent Scikit-learn and nltk modules under the hood, so as to generate a tf-idf sparse matrix and calculate the cosine similarity between the note you are currently editing and other notes in a directory.

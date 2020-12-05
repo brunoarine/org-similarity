@@ -10,7 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 STOPWORDS = "stopwords.txt"
-JUNKCHARS = "junkwords.txt"
+JUNKCHARS = "junkchars.txt"
 
 
 def read_file(filename):
@@ -46,7 +46,7 @@ def get_tokens(text):
     # that could leak into the tokens list
     for junkchar in junkchars:
         text = text.replace(junkchar, "")
-    text = text.replace("\n"," ")  # replace carriage returns with a space
+    text = text.replace("\n", " ")  # replace carriage returns with a space
     # I never understood why people import scikit's tokenizer function
     # for something so dead simple?
     tokens = text.split(" ")
@@ -65,7 +65,7 @@ def tfidf_similarity(input_filename, target_filenames):
     for term frequency-inverse document frequency), which is penalizes words
     that appear too often in a text.
 
-    base document with every other file in the directory """
+    base document with every other file in the directory"""
 
     base_document = read_file(input_filename)
     documents = [read_file(filename) for filename in target_filenames]
@@ -76,30 +76,26 @@ def tfidf_similarity(input_filename, target_filenames):
     documents.insert(0, base_document)
     embeddings = vectorizer.fit_transform(documents)
 
-    cosine_similarities = cosine_similarity(embeddings[0:1],
-                                            embeddings[1:]).flatten()
+    cosine_similarities = cosine_similarity(embeddings[0:1], embeddings[1:]).flatten()
     cosine_similarities = list(enumerate(cosine_similarities))
-    cosine_similarities = sorted(cosine_similarities,
-                                 key=lambda x:x[1],
-                                 reverse=True)
+    cosine_similarities = sorted(cosine_similarities, key=lambda x: x[1], reverse=True)
     return cosine_similarities
-
 
 
 def cmdline_args():
     """ Make parser object """
     p = argparse.ArgumentParser()
-    p.add_argument("--input_filename",
-                   "-i",
-                   type=str,
-                   help="input filename",
-                   required=True)
-    p.add_argument("--directory",
-                   "-d",
-                   type=str,
-                   help="directory of files to search",
-                   required=True)
-    return(p.parse_args())
+    p.add_argument(
+        "--input_filename", "-i", type=str, help="input filename", required=True
+    )
+    p.add_argument(
+        "--directory",
+        "-d",
+        type=str,
+        help="directory of files to search",
+        required=True,
+    )
+    return p.parse_args()
 
 
 def main():
@@ -119,10 +115,11 @@ def main():
         similar_filename = target_filenames[i].replace(directory, "")
         similar_title = open(similar_filename, "r").readline()
         similar_title = similar_title.replace("#+TITLE: ", "")[:-1]  # strip \n
-        message = "{:.2f} [[file:{}][{}]]".format(similar_score,
-                                                      similar_filename,
-                                                      similar_title)
+        message = "{:.2f} [[file:{}][{}]]".format(
+            similar_score, similar_filename, similar_title
+        )
         print(message)
+
 
 if __name__ == "__main__":
     main()
