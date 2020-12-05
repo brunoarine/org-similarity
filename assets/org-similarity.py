@@ -51,6 +51,7 @@ def cmdline_args():
         "-s",
         type=bool,
         default=False,
+        nargs="?",
         help="show cosine similarity score (default: False)",
         required=False
     )
@@ -147,9 +148,10 @@ def main():
         similar_score = pair[1]
         similar_title = open(target_filenames[i], "r").readline()
         similar_title = similar_title.replace("#+TITLE: ", "")[:-1]  # strip \n
-        # strip the full path from similar_filename, since org-mode links to
-        # files in the same folder don't contain the full path
-        similar_filename = target_filenames[i].replace(directory, "")
+        # org-mode links use relative rather than absolute paths
+        # similar_filename = target_filenames[i].replace(directory, "")
+        similar_filename = os.path.relpath(target_filenames[i],
+                                           os.path.dirname(input_filename))
         if show_score:
             message = "{:.2f} [[file:{}][{}]]".format(similar_score,
                                                       similar_filename,
