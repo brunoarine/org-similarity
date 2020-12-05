@@ -1,37 +1,25 @@
 #!/usr/bin/env python3
 
+import sys
+import os
+import argparse
+from nltk.stem import LancasterStemmer
 import glob
+import numpy as np
+import re
+
+#directory = "/home/soldeace/Sync/textos/zettelkasten/"
+#input_filename = "/home/soldeace/Sync/textos/zettelkasten/20201119153159.org"
+
+stemmer = LancasterStemmer().stem
 
 STOPWORDS = "stopwords.txt"
 JUNKCHARS = "junkchars.txt"
 
-directory = "/home/soldeace/Sync/textos/zettelkasten/*.org"
-#directory = "texts/*.*"
-#input_filename = "texts/irene.txt"
-input_filename = "/home/soldeace/Sync/textos/zettelkasten/20201119153159.org"
-
-stopwords = open(STOPWORDS, "r").read().split("\n")
-junkchars = open(JUNKCHARS, "r").read().split("\n")
+stopwords = open(os.path.join(sys.path[0], STOPWORDS), "r").read().split("\n")
+junkchars = open(os.path.join(sys.path[0], JUNKCHARS), "r").read().split("\n")
 # remove empty element, which will probably exist in the file
 junkchars = [char for char in junkchars if char]
-
-
-def strip_links(text, brackets="[]"):
-    count = [0] * (len(brackets) // 2)  # count open/close brackets
-    saved_chars = []
-    for character in text:
-        for i, b in enumerate(brackets):
-            if character == b:  # found bracket
-                kind, is_close = divmod(i, 2)
-                count[kind] += (-1)**is_close  # `+1`: open, `-1`: close
-                if count[kind] < 0:  # unbalanced bracket
-                    count[kind] = 0  # keep it
-                else:  # found bracket to remove
-                    break
-        else:  # character is not a [balanced] bracket
-            if not any(count):  # outside brackets
-                saved_chars.append(character)
-    return ''.join(saved_chars)
 
 
 def read_file(filename):
@@ -41,13 +29,16 @@ def read_file(filename):
     with open(filename, "r") as open_file:
         text = open_file.read()
     text = text.lower().replace("\n", " ")
-    #text = strip_links(text)
+    text = re.sub(r"file:\S+\]\[", "", text)
+    text = re.sub(r"http\S+\]\[", "", text)
     for junk in junkchars:
         text = text.replace(junk, " ")
     text = text.split(" ")
     text = [word for word in text if word not in stopwords]
     text = [word for word in text if word]
+    text = [stemmer(word) for word in text]
     return text
+
 
 
 def similarity(input_text, target_text):
@@ -69,19 +60,43 @@ def similarity(input_text, target_text):
     else:
         return 0
 
+def cmdline_args():
+        # Make parser object
+    p = argparse.ArgumentParser()
 
-input_text = read_file(input_filename)
-target_files = glob.iglob(directory)
+    p.add_argument("--input_file", "-i", type=str, help="input filename", required=True)
+    p.add_argument("--directory", "-d", type=str, help="directory of files to search", required=True)
 
-simvalues = []
-filenames = []
-for filename in target_files:
-    target_text = read_file(filename)
-    filenames.append(filename)
-    simvalues.append(similarity(input_text, target_text))
+    return(p.parse_args())
 
-ranking = zip(simvalues, filenames)
-ranking = sorted(ranking, key=lambda t: t[0], reverse=True)
 
-for entry in ranking[:10]:
-    print(entry[0], entry[1])
+def main():
+    args = cmdline_args()
+
+    input_file = args.input_file
+    directory = args.directory
+
+    input_text = read_file(input_file)
+    target_files = glob.iglob(directory + "*.org")
+
+    similarity_values = []
+    filenames = []
+    for filename in target_files:
+       target_text = read_file(filename)
+       filenames.append(filename)
+       similarity_values.append(similarity(input_text, target_text))
+
+       ranking = zip(similarity_values, filenames)
+       ranking = sorted(ranking, key=lambda t: t[0], reverse=True)
+
+    for entry in ranking[1:10]:
+        similar_number = entry[0]
+        similar_path = entry[1]
+        similar_title = open(similar_path, "r").readline().replace("#+TITLE: ", "").replace("\n","")
+        similar_filename = similar_path.replace(directory, "")
+        message = str(round(similar_number,2)) + " [[file:{}][{}]]".format(similar_filename, similar_title)
+        print(message)
+
+
+if __name__ == "__main__":
+    main()
