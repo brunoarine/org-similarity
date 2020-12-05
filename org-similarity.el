@@ -37,7 +37,7 @@
 
 ;;; Commentary:
 ;; A package to help discover similar or related org-mode files.
-;; Use M-x org-similarity RET to insert a list of links containing related files.
+;; Use M-x org-similarity-insert-list RET to insert a list of links containing related files.
 
 ;;; Code:
 
@@ -45,10 +45,12 @@
 
 (defvar org-similarity-list-size 10)
 
-(defun org-similarity ()
+(defvar org-similarity-directory org-roam-directory)
+
+(defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
-(let ((command (format "python3 /assets/org-similarity.py -i %s -d %s" buffer-file-name org-roam-directory)))
+(let ((command (format "python3 /assets/org-similarity.py -i %s -d %s" buffer-file-name org-similarity-directory)))
   (insert (shell-command-to-string command)))
   )
 

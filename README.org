@@ -1,3 +1,57 @@
 * org-similarity
 
-A package to help org-mode/org-roam users discover similar or related notes. It uses Python and the excellent Scikit-learn and nltk modules under the hood, so as to generate a tf-idf sparse matrix and calculate the cosine similarity between the note you are currently editing and other notes in a directory.
+=org-similarity= is a package to help org-mode users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, =org-similarity= cleans the org files (by stripping the front matter and some undesired characters), tokenizes the documents, replaces each token with their respective linguistic stems, generates a TF-IDF sparse matrix, and calculate the cosine similarity between the note you are currently editing and other notes in a directory of choice.
+
+** Installation
+
+*** Via straight
+#+begin_src elisp
+(straight-use-package
+ '(org-similarity :type git :host github :repo "soldeace/org-similarity"))
+#+end_src
+
+*** Doom Emacs
+
+  #+begin_src elisp
+(package! org-similarity
+  :recipe (:host github :repo "soldeace/org-similarity"))
+  #+end_src
+
+  
+*** Via cloning
+
+You can also clone the repository somewhere in your load-path. If you would like to assist with development, this is the way to go.
+
+To do that:
+
+1. Create a directory where you’d like to clone the repository, e.g. =mkdir ~/projects=.
+2. cd ~/projects
+3. git clone https://github.com/soldeace/org-similarity.git
+
+You now have the repository cloned in =~/projects/org-similarity/=. Now paste the following sexps in your init-file (e.g. =~/.emacs.d/init.el=):
+
+#+begin_src elisp
+;; If you cloned the repository
+(add-to-list 'load-path "~/projects/org-similarity/") ;Modify with your own path
+(require 'org-similarity)
+#+end_src
+
+You can also copy =org-similarity/= somewhere where load-path can access it, but you’d have to update the file manually.
+
+** Usage
+
+Use =M-x org-similarity-insert-list RET= to insert a list of links containing related files from a directory.
+
+** License
+
+Copyright 2020 Bruno Arine
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
