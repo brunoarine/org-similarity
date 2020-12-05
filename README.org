@@ -2,6 +2,17 @@
 
 =org-similarity= is a package to help org-mode users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, =org-similarity= cleans the org files (by stripping the front matter and some undesired characters), tokenizes the documents, replaces each token with their respective linguistic stems, generates a TF-IDF sparse matrix, and calculate the cosine similarity between the note you are currently editing and other notes in a directory of choice.
 
+** Dependencies
+
+ - Python 3
+ - =scikit-learn=
+ - =nltk=
+
+ To ensure you have the latest packages, run:
+ #+begin_src
+$ pip install -U scikit-learn nltk
+ #+end_src
+
 ** Installation
 
 *** Via straight
