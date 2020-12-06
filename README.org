@@ -1,9 +1,9 @@
 * org-similarity
 
-=org-similarity= is a package to help org-mode users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, =org-similarity= cleans the org files (by stripping the front matter and some undesired characters), tokenizes the documents, replaces each token with their respective linguistic stems, generates a TF-IDF sparse matrix, and calculate the cosine similarity between the note you are currently editing and other notes in a directory of choice.
+=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.
 
 ** Dependencies
-
+ - Emacs 24 or above
  - Python 3
  - [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] 
  - [[https://github.com/nltk/nltk][nltk]] 
@@ -15,7 +15,7 @@ $ pip install -U scikit-learn nltk
 
 ** Installation
 
-*** Via straight
+*** Via straight.el
 #+begin_src elisp
 (straight-use-package
  '(org-similarity :type git :host github :repo "soldeace/org-similarity"))
@@ -27,7 +27,6 @@ $ pip install -U scikit-learn nltk
 (package! org-similarity
   :recipe (:host github :repo "soldeace/org-similarity"))
   #+end_src
-
   
 *** Via cloning
 
