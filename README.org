@@ -20,14 +20,14 @@ $ pip install -U scikit-learn nltk
 *** Via straight.el
 #+begin_src elisp
 (straight-use-package
- '(org-similarity :type git :host github :repo "soldeace/org-similarity"))
+ '(org-similarity :type git :host github :repo "brunoarine/org-similarity"))
 #+end_src
 
 *** Doom Emacs
 
   #+begin_src elisp
 (package! org-similarity
-  :recipe (:host github :repo "soldeace/org-similarity"))
+  :recipe (:host github :repo "brunoarine/org-similarity"))
   #+end_src
   
 *** Via cloning
@@ -38,7 +38,7 @@ To do that:
 
 1. Create a directory where you’d like to clone the repository, e.g. =mkdir ~/projects=.
 2. cd ~/projects
-3. git clone https://github.com/soldeace/org-similarity.git
+3. git clone https://github.com/brunoarine/org-similarity.git
 
 You now have the repository cloned in =~/projects/org-similarity/=. Now paste the following sexps in your init-file (e.g. =~/.emacs.d/init.el=):
 
