@@ -1,0 +1,5 @@
+#+TITLE: Todo
+
+* TODO lista final deve considerar notas que não tem o #+TITLE como primeira linha
+* TODO lista final sai com #+title se estiver em minúscula
+
