@@ -1,3 +1,13 @@
+#+TITLE: Org-roam-similarity
+
+Welcome to my fork of ~org-similarity~ by Bruno Arine. As you can assume from the name, this fork is about integrating ~org-similarity~ and ~org-roam~ more. ~org-similarity~ is a very cool package for helping Emacs discover files which are related to a certain file. In its current implementation it has an input of a file (which has to be the current buffer) and an output of a list of links in text pointing to files which are similar to the current file.
+
+This isn't a problem in itself, however, if you want to integrate it more with org-roam you need to be able to do more than that. I plan to make the output of the low-level function (the one that exists in the original) to be a list of org-roam nodes as then, from the list of nodes you can write functions which do various useful actions with that list. I also want to make the input more flexible by allowing the user to select any node from their system instead of only the current buffer. This is all going to be on the basis of Bruno's original code (who I would like to thank for his amazing work if he ever sees this) but with more elisp under the hood to manipulate the python script's output in a way that org-roam can use it better.
+
+Development on this fork started at December 19th 2022 and I will try to have most of the functionality ready in the coming months. Once its fleshed out, I plan to document it better and then release it on MELPA for public usage. If you would like to collaborate in this project, feel free to email me at vidianosgiannitsis@gmail.com or here. I will try to be very active here, especially during Christmas holidays as this idea interests me a lot.
+
+Below is the original README which contains important instructions for installing and using this package. Since I am going to change a lot of it, it will need to be updated, but for now, it will have to do.
+
 * org-similarity
 
 =org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.

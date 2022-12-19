@@ -146,8 +146,9 @@ def main():
     for pair in cosine_similarities[1:number_of_documents+1]:
         i = pair[0]
         similar_score = pair[1]
-        similar_title = open(target_filenames[i], "r").readline()
-        similar_title = similar_title.replace("#+TITLE: ", "")[:-1]  # strip \n
+        similar_lines = open(target_filenames[i], "r").readlines()
+        similar_title = similar_lines[3]
+        similar_title = similar_title.replace("#+title: ", "")[:-1]  # strip \n
         # org-mode links use relative rather than absolute paths
         # similar_filename = target_filenames[i].replace(directory, "")
         similar_filename = os.path.relpath(target_filenames[i],
