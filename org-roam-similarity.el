@@ -181,8 +181,108 @@ collected, having pushed NODE to that list."
 	  (let* ((props (org-entry-properties))
 		 (id (cdr (assoc "ID" props)))
 		 (rel-node (org-roam-node-from-id id)))
-	    (add-to-list 'node-list rel-node)))))
-    (add-to-list 'org-roam-similarity-nodes-list (push NODE node-list))))
+	    (push rel-node node-list)))))
+    (push (push NODE node-list) org-roam-similarity-nodes-list))
+  (car org-roam-similarity-nodes-list))
+
+(defun org-roam-similarity-node-read--completions* (node-list &optional filter-fn sort-fn)
+  "Run `org-roam-node-read--completions' with NODE-LIST being a list of nodes.
+
+Typically, the function takes `org-roam-node-list' as the initial
+list of nodes and creates the alist `org-roam-node-read'
+uses.  However, it can be helpful to supply the list of nodes
+yourself, when the predicate function used cannot be inferred
+through a filter function of the form this function
+takes.  FILTER-FN and SORT-FN are the same as in
+`org-roam-node-read--completions'.  The resulting alist is to be
+used with `org-roam-similarity-node-read*'."
+  (let* ((template (org-roam-node--process-display-format org-roam-node-display-template))
+	 (nodes node-list)
+	 (nodes (mapcar (lambda (node)
+			  (org-roam-node-read--to-candidate node template)) nodes))
+	 (nodes (if filter-fn
+		    (cl-remove-if-not
+		     (lambda (n) (funcall filter-fn (cdr n)))
+		     nodes)
+		  nodes))
+	 (sort-fn (or sort-fn
+		      (when org-roam-node-default-sort
+			(intern (concat "org-roam-node-read-sort-by-"
+					(symbol-name org-roam-node-default-sort))))))
+	 (nodes (if sort-fn (seq-sort sort-fn nodes)
+		  nodes)))
+    nodes))
+
+(defun org-roam-similarity-node-read* (node-list &optional initial-input filter-fn sort-fn require-match prompt)
+  "Run `org-roam-node-read' with the nodes supplied by NODE-LIST.
+
+NODE-LIST is a list of nodes passed to
+`org-roam-similarity-node-read--completions*', which creates an alist of
+nodes with the proper formatting to be used in this
+function.  This is for those cases where it is helpful to use your
+own list of nodes, because a predicate function can not filter
+them in the way you want easily.
+
+INITIAL-INPUT, SORT-FN, FILTER-FN, REQUIRE-MATCH, PROMPT are the
+same as in `org-roam-node-read'.
+
+Note that this function is an extension of `org-roam-node-read''s
+functionality and is not to be confused with
+`org-roam-similarity-node-read', which is a function that uses
+this as a helper function to run an `org-roam-node-read' that
+displays only a node and its most relevant nodes."
+  (let* ((nodes (zetteldesk-ref-roam-node-read--completions* node-list filter-fn sort-fn))
+	 (prompt (or prompt "Node: "))
+	 (node (completing-read
+		prompt
+		(lambda (string pred action)
+		  (if (eq action 'metadata)
+		      `(metadata
+			;; Preserve sorting in the completion UI if a sort-fn is used
+			,@(when sort-fn
+			    '((display-sort-function . identity)
+			      (cycle-sort-function . identity)))
+			(annotation-function
+			 . ,(lambda (title)
+			      (funcall org-roam-node-annotation-function
+				       (get-text-property 0 'node title))))
+			(category . org-roam-node))
+		    (complete-with-action action nodes string pred)))
+		nil require-match initial-input 'org-roam-node-history)))
+    (or (cdr (assoc node nodes))
+	(org-roam-node-create :title node))))
+
+(defun org-roam-similarity-node-read ()
+  "Filtered version of `org-roam-node-read' showing similarities.
+
+Prompts for a node and then runs a filtered `org-roam-node-read'
+showing just the node and all nodes similar to it as they are
+determined by `org-roam-similarity-collect-nodes'. There is no
+need for a filter function as instead of `org-roam-node-read',
+this calls `org-roam-similarity-node-read*' a helper function
+that takes the node-list it needs to display as an argument.
+
+For performance reasons, the function first checks if the output
+of `org-roam-similarity-collect-nodes' for this node has been
+stored in `org-roam-similarity-nodes-list' using the predicate
+function `org-roam-similarity-node-cached-p'. If it has been
+saved, the predicate will return the list so it can be passed
+directly to `org-roam-similarity-node-read*'. Otherwise, pass it
+the result of `org-roam-similarity-collect-nodes'."
+  (interactive)
+  (let* ((node (org-roam-node-read))
+	 (node-list (org-roam-similarity-node-cached-p node)))
+    (if node-list
+	(org-roam-similarity-node-read* node-list)
+      (org-roam-similarity-node-read* (org-roam-similarity-collect-nodes node)))))
+
+(defun org-roam-similarity-node-find ()
+  "Find the file returned by `org-roam-similarity-node-read'.
+
+This is a wrapper around `org-roam-similarity-node-read' to find
+the file associated with the selected node."
+  (interactive)
+  (find-file (org-roam-node-file (org-roam-similarity-node-read))))
 
 (provide 'org-roam-similarity)
 
