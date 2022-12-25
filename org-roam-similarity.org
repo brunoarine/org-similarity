@@ -364,6 +364,44 @@ This section is about the second important part of this package. Taking the list
 
 #+END_SRC
 
+* Sort org-roam-node-insert to show relevant notes first
+This is the final feature I plan to implement in my initial draft of this project (more are going to crop up however I am certain and there is also integrations with other things, such as zetteldesk.el). I thought it would be cool if I could make an implementation of ~org-roam-node-insert~, presumable ~org-roam-similarity-node-insert~ that sorted the nodes to display nodes it considers relevant to the current first. Filtering is not an ideal option cause this algorithm can be dumb sometimes and even with a large number of entries it won't return all notes that you might consider relevant, but sorting some things that are likely to be relevant at the top is arguably a handy feature. To do this, I need a sorting function. Sorting functions for ~org-roam-node-read~ are expected to take 2 arguments (typically nodes) and depending on if it returns t or nil, sort them. However, this is not a conventional sorter. The only thing we are practically interested in is that if one node is relevant to the current it should go higher than one that is not. When comparing two relevant or two irrelevant nodes to the current, we do not care about the result, but we can probably have an else statement that returns t.
+
+** Cases
+NodeA is relevant while NodeB is not -> Return t
+NodeB is relevant while NodeA is not -> Return nil
+NodeA and NodeB are both relevant or irrelevant -> Output does not matter
+
+To collect the list of relevant nodes, we can simply run ~org-roam-similarity-collect-nodes~ and give the argument ~org-roam-node-at-point~. However, we only want to do that if the node's similarities haven't been cached, so we probably need to implement a similar ~if~ statement to ~org-roam-similarity-node-read~. Then we need a predicate that takes two nodes and checks in which case they are. This can probably be done with ~cond~.
+
+The first implementation of mine is incorrect, because returning nil just means that NodeB should be higher than NodeA. The sorting doesn't work with the logic that the top 10 nodes are the 10 nodes for which the predicate returns t. But for now here is the code
+#+BEGIN_SRC elisp
+
+  (defun org-roam-similarity-similar-p (NODE-LIST NODEA NODEB)
+    ""
+    (cond
+     ((and (member NODEA NODE-LIST) (not (member NODEB NODE-LIST)))
+      t)
+     ((and (not (member NODEA NODE-LIST)) (member NODEB NODE-LIST))
+      nil)
+     ((and (member NODEA NODE-LIST) (member NODEB NODE-LIST))
+      t)
+     ((and (not (member NODEA NODE-LIST)) (not (member NODEB NODE-LIST)))
+     nil)))
+
+  (defun org-roam-similarity-sort-by-similarity (NODEA NODEB)
+    ""
+    (let* ((current-node (org-roam-node-at-point))
+	   (node-list (org-roam-similarity-node-cached-p current-node)))
+      (if node-list
+	  (org-roam-similarity-similar-p node-list NODEA NODEB)
+	(org-roam-similarity-similar-p (org-roam-similarity-collect-nodes current-node)
+				       NODEA NODEB))))
+  
+#+END_SRC
+
+It works correctly in the sense that it returns t when NODEA is relevant and NODEB isn't or when both are relevant and returns nil when NODEB is relevant and NODEA isn't or both are irrelevant, but that isn't enough.
+
 * Provide the package
 Finally, we need to provide the package so people can load it to their config
 #+BEGIN_SRC elisp :tangle yes
