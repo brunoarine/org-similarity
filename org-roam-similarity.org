@@ -6,6 +6,8 @@ This file is the literate configuration of org-roam-similarity. Org-roam-similar
 - [[#preamble][Preamble]]
 - [[#original-code][Original code]]
   - [[#improvement-to-the-original][Improvement to the original]]
+- [[#prompt-for-node-collect-nodes][Prompt for node, collect nodes]]
+- [[#org-roam-similarity-node-find][Org-roam-similarity-node-find]]
 - [[#provide-the-package][Provide the package]]
 
 * Preamble
@@ -121,11 +123,30 @@ This section contains the original code of the package (with the prefix changed 
 #+END_SRC
 
 ** Improvement to the original
-When I first tested ~org-similarity~, I didn't like the fact that it inserted the list of links in the current buffer. I was planning to customize this myself, but from [[https://org-roam.discourse.group/t/a-demo-of-ai-for-linking-writing-and-thinking-with-org-roam-should-we-build-org-roam-ai/2891/6][this]] discussion (from which I discovered the package) I was given a snippet which implemented for the most part what I wanted. This section is about that snippet of code which is probably going to be what I customize moving forward and not ~org-roam-similariy-insert-list~.
+When I first tested ~org-similarity~, I didn't like the fact that it inserted the list of links in the current buffer. I was planning to customize this myself, but from [[https://org-roam.discourse.group/t/a-demo-of-ai-for-linking-writing-and-thinking-with-org-roam-should-we-build-org-roam-ai/2891/6][this]] discussion (from which I discovered the package) I was given a snippet which implemented for the most part what I wanted. This section is about that snippet of code which is probably going to be what I customize moving forward and not ~org-roam-similarity-insert-list~.
+
+In this section there is also an alternative version of that which takes an arbitrary node as the filename instead of ~buffer-file-name~. Since that is more useful to me than the original, I have that as ~org-roam-similarity-sidebuffer~ and the original as ~org-roam-similarity-sidebuffer*~. 
 
 #+BEGIN_SRC elisp :tangle yes
 
   (defun org-roam-similarity-sidebuffer ()
+      "Puts the results of org-similarity in a side-window."
+      (interactive)
+      (let ((command (format "python3 %s -i %s -d %s -l %s -n %s %s"
+	      (concat org-roam-similarity-root "/assets/org-similarity.py")
+	       (org-roam-node-file (org-roam-node-read))
+	       org-roam-similarity-directory
+	       org-roam-similarity-language
+	       org-roam-similarity-number-of-documents
+	       (if org-roam-similarity-show-scores "--score" ""))))
+	(setq similarity-results (shell-command-to-string command)))
+	(with-output-to-temp-buffer "*Similarity Results*"
+	(princ similarity-results))
+	(with-current-buffer "*Similarity Results*"
+	(org-mode))
+	)
+
+  (defun org-roam-similarity-sidebuffer* ()
       "Puts the results of org-similarity in a side-window."
       (interactive)
       (let ((command (format "python3 %s -i %s -d %s -l %s -n %s %s"
@@ -141,6 +162,7 @@ When I first tested ~org-similarity~, I didn't like the fact that it inserted th
 	(with-current-buffer "*Similarity Results*"
 	(org-mode))
       )
+  
     (add-to-list 'display-buffer-alist
 		 '("*Similarity Results*"
 		   (display-buffer-in-side-window)
@@ -226,7 +248,7 @@ The next important part is taking this list and starting to do things with it.
 #+END_SRC
 
 * Org-roam-similarity-node-find
-This section is about the second important part of this package. Taking the lists returned by ~org-roam-similarity-collect-nodes~ and using them. First thing that is defined here is a helper function ~org-roam-similarity-node-read*~, which is an extension of ~org-roam-node-read~ to display an arbitrary node-list instead of ~org-roam-node-list~. Then, there is ~org-roam-similarity-node-read~, which reads a node and then displays it and all similar nodes to it (the lists collected above) using that helper function. Finally ~org-roam-similarity-node-find~ is a wrapper around ~org-roam-similarity-node-read~ that also runs ~find-file~ on the file associated with the variable.
+This section is about the second important part of this package. Taking the lists returned by ~org-roam-similarity-collect-nodes~ and using them. First thing that is defined here is a helper function ~org-roam-similarity-node-read*~, which is an extension of ~org-roam-node-read~ to display an arbitrary node-list instead of ~org-roam-node-list~. Then, there is ~org-roam-similarity-node-cached-p~ which is a predicate that checks if a node's similarities have already been saved in ~org-roam-similarity-nodes-list~ and if they have returns that list. With that we can define ~org-roam-similarity-node-read~, which reads a node and then displays it and all similar nodes to it (the lists collected above) using the above helper functions. ~org-roam-similarity-node-cached-p~ is important for performace reasons to not run the slow python script more than it needs to. Finally ~org-roam-similarity-node-find~ is a wrapper around ~org-roam-similarity-node-read~ that also runs ~find-file~ on the file associated with the variable.
  
 #+BEGIN_SRC elisp :tangle yes
 
@@ -297,7 +319,18 @@ This section is about the second important part of this package. Taking the list
       (or (cdr (assoc node nodes))
 	  (org-roam-node-create :title node))))
 
-  (defun org-roam-similarity-node-read ()
+  (defun org-roam-similarity-node-cached-p (NODE)
+    "Check if NODE is saved in `org-roam-similarity-nodes-list'.
+
+  This is a predicate function that returns NODE and all similar
+  nodes to it if they have been cached in
+  `org-roam-similarity-nodes-list'. That list is filled using
+  `org-roam-similarity-collect-nodes'."
+    (dolist (list org-roam-similarity-nodes-list)
+      (when (equal NODE (car list))
+	(return list))))
+
+  (defun org-roam-similarity-node-read (NODE)
     "Filtered version of `org-roam-node-read' showing similarities.
 
   Prompts for a node and then runs a filtered `org-roam-node-read'
@@ -314,20 +347,20 @@ This section is about the second important part of this package. Taking the list
   saved, the predicate will return the list so it can be passed
   directly to `org-roam-similarity-node-read*'. Otherwise, pass it
   the result of `org-roam-similarity-collect-nodes'."
-    (interactive)
-    (let* ((node (org-roam-node-read))
-	   (node-list (org-roam-similarity-node-cached-p node)))
+    (interactive (list (org-roam-node-read)))
+    (let* ((node-list (org-roam-similarity-node-cached-p NODE)))
       (if node-list
 	  (org-roam-similarity-node-read* node-list)
-	(org-roam-similarity-node-read* (org-roam-similarity-collect-nodes node)))))
+	(org-roam-similarity-node-read* (org-roam-similarity-collect-nodes NODE)))))
 
-  (defun org-roam-similarity-node-find ()
+  (defun org-roam-similarity-node-find (NODE)
     "Find the file returned by `org-roam-similarity-node-read'.
 
   This is a wrapper around `org-roam-similarity-node-read' to find
   the file associated with the selected node."
-    (interactive)
-    (find-file (org-roam-node-file (org-roam-similarity-node-read))))
+    (interactive (list (org-roam-node-read)))
+    (find-file (org-roam-node-file
+		(org-roam-similarity-node-read NODE))))
 
 #+END_SRC
 

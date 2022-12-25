@@ -101,6 +101,23 @@ used with org-roam."
     (interactive)
     (let ((command (format "python3 %s -i %s -d %s -l %s -n %s %s"
 	    (concat org-roam-similarity-root "/assets/org-similarity.py")
+	     (org-roam-node-file (org-roam-node-read))
+	     org-roam-similarity-directory
+	     org-roam-similarity-language
+	     org-roam-similarity-number-of-documents
+	     (if org-roam-similarity-show-scores "--score" ""))))
+      (setq similarity-results (shell-command-to-string command)))
+      (with-output-to-temp-buffer "*Similarity Results*"
+      (princ similarity-results))
+      (with-current-buffer "*Similarity Results*"
+      (org-mode))
+      )
+
+(defun org-roam-similarity-sidebuffer* ()
+    "Puts the results of org-similarity in a side-window."
+    (interactive)
+    (let ((command (format "python3 %s -i %s -d %s -l %s -n %s %s"
+	    (concat org-roam-similarity-root "/assets/org-similarity.py")
 	     buffer-file-name
 	     org-roam-similarity-directory
 	     org-roam-similarity-language
@@ -112,6 +129,7 @@ used with org-roam."
       (with-current-buffer "*Similarity Results*"
       (org-mode))
     )
+
   (add-to-list 'display-buffer-alist
 	       '("*Similarity Results*"
 		 (display-buffer-in-side-window)
@@ -252,7 +270,18 @@ displays only a node and its most relevant nodes."
     (or (cdr (assoc node nodes))
 	(org-roam-node-create :title node))))
 
-(defun org-roam-similarity-node-read ()
+(defun org-roam-similarity-node-cached-p (NODE)
+  "Check if NODE is saved in `org-roam-similarity-nodes-list'.
+
+This is a predicate function that returns NODE and all similar
+nodes to it if they have been cached in
+`org-roam-similarity-nodes-list'. That list is filled using
+`org-roam-similarity-collect-nodes'."
+  (dolist (list org-roam-similarity-nodes-list)
+    (when (equal NODE (car list))
+      (return list))))
+
+(defun org-roam-similarity-node-read (NODE)
   "Filtered version of `org-roam-node-read' showing similarities.
 
 Prompts for a node and then runs a filtered `org-roam-node-read'
@@ -269,20 +298,20 @@ function `org-roam-similarity-node-cached-p'. If it has been
 saved, the predicate will return the list so it can be passed
 directly to `org-roam-similarity-node-read*'. Otherwise, pass it
 the result of `org-roam-similarity-collect-nodes'."
-  (interactive)
-  (let* ((node (org-roam-node-read))
-	 (node-list (org-roam-similarity-node-cached-p node)))
+  (interactive (list (org-roam-node-read)))
+  (let* ((node-list (org-roam-similarity-node-cached-p NODE)))
     (if node-list
 	(org-roam-similarity-node-read* node-list)
-      (org-roam-similarity-node-read* (org-roam-similarity-collect-nodes node)))))
+      (org-roam-similarity-node-read* (org-roam-similarity-collect-nodes NODE)))))
 
-(defun org-roam-similarity-node-find ()
+(defun org-roam-similarity-node-find (NODE)
   "Find the file returned by `org-roam-similarity-node-read'.
 
 This is a wrapper around `org-roam-similarity-node-read' to find
 the file associated with the selected node."
-  (interactive)
-  (find-file (org-roam-node-file (org-roam-similarity-node-read))))
+  (interactive (list (org-roam-node-read)))
+  (find-file (org-roam-node-file
+	      (org-roam-similarity-node-read NODE))))
 
 (provide 'org-roam-similarity)
 
