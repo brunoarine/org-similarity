@@ -123,7 +123,7 @@ def tfidf_similarity(input_filename, target_filenames):
     base_document = read_file(input_filename)
     documents = [read_file(filename) for filename in target_filenames]
 
-    vectorizer = TfidfVectorizer(tokenizer=get_tokens)
+    vectorizer = TfidfVectorizer(tokenizer=get_tokens, token_pattern=None)
 
     # To make uniformed vectors, both documents need to be combined first.
     documents.insert(0, base_document)
