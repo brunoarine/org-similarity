@@ -5,8 +5,9 @@ import sys
 from pathlib import Path
 import numpy as np
 import functools
+import orgparse
 
-from nltk.stem import SnowballStemmer
+from nltk.stem import SnowballStemmer, api
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -84,7 +85,7 @@ def read_file(filename: Path) -> str:
         return open_file.read()
 
 
-def get_tokens(text, stemmer):
+def get_tokens(text: str, stemmer: api.StemmerI):
     """
     Preprocess a text and returns a list of tokens.
     """
@@ -147,18 +148,18 @@ def format_results(
     sorted_results = sorted(results, key = lambda x: x[0], reverse=True)
     formatted_results = []
     for score, target in sorted_results:
-        with open(target, "r") as f:
-            title = f.readline().strip()
-        # org-mode links use relative rather than absolute paths
-        # similar_filename = target_filenames[i].replace(directory, "")
-        target_filename = os.path.relpath(target, os.path.dirname(input_path))
-        if show_scores:
-            message = "{:.2f} [[file:{}][{}]]".format(
-                score, target_filename, title
-            )
+        org_content = orgparse.load(target)
+        title = org_content.get_file_property("title")
+        score_output = f"{score:.3f} " if show_scores else ""
+        if id_links:
+            target_id = org_content.get_file_property('id')
+            link_ref = f"id:{target_id}"
         else:
-            message = "[[file:{}][{}]]".format(target_filename, title)
-        formatted_results.append(message)
+            # org-mode links use relative rather than absolute paths
+            target_rel_path = target.relative_to(input_path.parent)
+            link_ref = f"file:{target_rel_path}"
+        entry = f"{score_output}[[{link_ref}][{title}]]"
+        formatted_results.append(entry)
     return formatted_results
 
 
