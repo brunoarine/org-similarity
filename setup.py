@@ -13,10 +13,8 @@ setup(
     description="org-similarity is a package to help Emacs org-mode users"
     "discover similar or related file",
     long_description=open("README.org").read(),
+    package_data={'': ['*.txt', 'orgsimilarity/*.txt']},
+    include_package_data=True,
     install_requires=[
-        "nltk == 3.8",
-        "numpy == 1.24.0",
-        "scikit-learn == 1.2.0",
-        "orgparse == 0.3.1",
     ],
 )

@@ -91,9 +91,10 @@
 
 ;; Dependency installation variables and functions
 
-(defvar org-similarity-python-interpreter
+(defcustom org-similarity-python-interpreter
   (concat org-similarity-package-path "venv/bin/python")
-  "Path to the Python executable that you want to use.")
+  "Path to the Python executable that you want to use."
+  :type 'string)
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
@@ -132,11 +133,7 @@
           (message "Installation of `org-similarity' Python dependencies succeeded")
         (error "Installation of `org-similarity' Python dependencies failed!")))))
 
-;; If org-similarity dependencies are not installed yet, install them
-(unless (org-similarity--is-deps-available)
-  (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
-      (org-similarity-install-dependencies)
-    (error "Org-similarity won't work until its Python dependencies are downloaded!")))
+
 
 
 ;; Main routine.
@@ -144,6 +141,11 @@
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
+;; If org-similarity dependencies are not installed yet, install them
+  (unless (org-similarity--is-deps-available)
+    (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
+      (org-similarity-install-dependencies)
+    (error "Org-similarity won't work until its Python dependencies are downloaded!")))
   (goto-char (point-max))
   (newline)
   (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
