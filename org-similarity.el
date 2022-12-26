@@ -107,9 +107,9 @@
 
 (defun org-similarity--is-deps-available ()
   "Return t if requirements.txt packages are installed, nil otherwise."
+  (if (file-exists-p org-similarity-python-interpreter)
     (zerop (call-process org-similarity-python-interpreter nil nil nil
-                  (concat org-similarity-package-path "check_deps.py"))))
-(org-similarity--is-deps-available)
+                  (concat org-similarity-package-path "check_deps.py"))) nil))
 
 (defun org-similarity-install-dependencies ()
   "Create environment and install Python dependencies and main script."
