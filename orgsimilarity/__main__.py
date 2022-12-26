@@ -95,9 +95,6 @@ def get_tokens(text, stemmer):
     # this screws with the stopwords filter some lines below.
     text = text.lower()
     text = text.replace("’", "'")
-    # Strip org and web links.
-    text = re.sub(r"file:\S+\]\[", "", text)
-    text = re.sub(r"http\S+\]\[", "", text)
     # Remove org-mode front matter and other special characters
     # that could leak into the tokens list.
     for junkchar in junkchars:
@@ -123,8 +120,10 @@ def get_scores(input_filename, target_filenames, stemmer):
     frequency-inverse document frequency), which penalizes words that appear too
     often in a text."""
 
-    base_document = read_file(input_filename)
-    documents = [read_file(filename) for filename in target_filenames]
+    base_document = orgparse.load(input_filename).get_body(format="plain")
+    documents = [
+        orgparse.load(f).get_body(format="plain") for f in target_filenames
+    ]
     tokenizer = functools.partial(get_tokens, stemmer=stemmer)
     vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
 
@@ -145,14 +144,14 @@ def format_results(
 ) -> list:
     """Format results in an org-compatible format with links."""
     results = zip(scores, targets)
-    sorted_results = sorted(results, key = lambda x: x[0], reverse=True)
+    sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
     formatted_results = []
     for score, target in sorted_results:
         org_content = orgparse.load(target)
         title = org_content.get_file_property("title")
         score_output = f"{score:.3f} " if show_scores else ""
         if id_links:
-            target_id = org_content.get_file_property('id')
+            target_id = org_content.get_property("ID")
             link_ref = f"id:{target_id}"
         else:
             # org-mode links use relative rather than absolute paths

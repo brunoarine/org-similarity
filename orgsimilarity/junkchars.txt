@@ -1,17 +1,3 @@
-#+title:
-#+date:
-#+lastmod:
-#+setupfile:
-hugo
-setup
-.org
-cite:
-citet:
-citep:
-#+begin_quote
-#+end_quote
-#+caption
-#+downloaded
 's
 .
 ;
