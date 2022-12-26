@@ -91,10 +91,9 @@
 
 ;; Dependency installation variables and functions
 
-(defcustom org-similarity-python-interpreter
+(defvar org-similarity-python-interpreter
   (concat org-similarity-package-path "venv/bin/python")
-  "Path to the Python executable that you want to use."
-  :type 'string)
+  "Path to the Python executable that you want to use.")
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
