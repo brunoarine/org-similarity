@@ -7,7 +7,7 @@ import numpy as np
 import functools
 import orgparse
 
-from nltk.stem import SnowballStemmer, api
+from nltk.stem import SnowballStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -85,7 +85,7 @@ def read_file(filename: Path) -> str:
         return open_file.read()
 
 
-def get_tokens(text: str, stemmer: api.StemmerI):
+def get_tokens(text, stemmer):
     """
     Preprocess a text and returns a list of tokens.
     """

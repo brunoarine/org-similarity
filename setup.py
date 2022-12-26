@@ -7,7 +7,7 @@ setup(
     version="0.2",
     author="Bruno Arine",
     author_email="bruno.arine@runbox.com",
-    packages=["org-similarity"],
+    packages=["org_similarity"],
     url="http://www.github.com/brunoarine/org-similarity",
     license="LICENSE.txt",
     description="org-similarity is a package to help Emacs org-mode users"
