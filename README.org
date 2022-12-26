@@ -1,23 +1,14 @@
 * org-similarity
 
-=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]]  for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.
+=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]] for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.
 
-[[./example.gif]]
-
-** Dependencies
- - Emacs 24 or above
- - Python 3
- - [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] 
- - [[https://github.com/nltk/nltk][nltk]] 
-
- To ensure you have the latest packages, run:
- #+begin_src
-$ pip install -U scikit-learn nltk
- #+end_src
+[[./assets/example.gif]]
 
 ** Installation
 
-*** Via straight.el
+
+*** straight.el
+
 #+begin_src elisp
 (straight-use-package
  '(org-similarity :type git :host github :repo "brunoarine/org-similarity"))
@@ -30,56 +21,67 @@ $ pip install -U scikit-learn nltk
   :recipe (:host github :repo "brunoarine/org-similarity"))
   #+end_src
   
-*** Via cloning
+*** Local package loading
 
-You can also clone the repository somewhere in your load-path. If you would like to assist with development, this is the way to go.
-
-To do that:
-
-1. Create a directory where you’d like to clone the repository, e.g. =mkdir ~/projects=.
-2. cd ~/projects
-3. git clone https://github.com/brunoarine/org-similarity.git
-
-You now have the repository cloned in =~/projects/org-similarity/=. Now paste the following sexps in your init-file (e.g. =~/.emacs.d/init.el=):
+You can load =org-similarity= by adding it to your =load-path=, and the manually loading it with =require=. If you would like to assist with development, this is the way to go. Paste the following instructions in your init file (e.g. =~/.emacs.d/init.el=):
 
 #+begin_src elisp
-;; If you cloned the repository
-(add-to-list 'load-path "~/projects/org-similarity/") ;Modify with your own path
+(add-to-list 'load-path "/path/to/org-similarity")
 (require 'org-similarity)
 #+end_src
 
-You can also copy =org-similarity/= somewhere where load-path can access it, but you’d have to update the file manually.
+Or, with =use-package=:
+
+#+begin_src elisp
+(use-package org-similarity
+  :load-path  "path/to/org-similarity")
+#+end_src
 
 ** Configuration
 
 There are a few variables that can be set to customize how =org-similarity= operates and generates the list of similar documents:
 
 #+begin_src elisp
-;; directory to scan for possibly similar documents.
-;; org-roam users might want to change it to org-roam-directory
+;; Directory to scan for possibly similar documents.
+;; org-roam users might want to change it to `org-roam-directory'.
 (setq org-similarity-directory org-directory)
-;; the language passed to nltk's Snowball stemmer
+
+;; The language passed to the Snowball stemmer in the `nltk' package.  The
+;; following languages are supported: Arabic, Danish, Dutch, English, Finnish,
+;; French, German, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian,
+;; Spanish and Swedish.
 (setq org-similarity-language "english")
-;; how many similar entries to list at the end of the buffer
+
+;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
-;; whether to prepend the list entries with their cosine similarity score
+
+;; Whether to prepend the list entries with similarity scores.
 (setq org-similarity-show-scores nil)
+
+;; Whether the resulting list of similar documents will point to ID property or
+;; filename. Default it nil.
+;; However, I recommend setting it to `t' if you use `org-roam' v2.
+(setq org-similarity-use-id-scores nil)
+
+;; Scan for files inside `org-similarity-directory' recursively.
+(setq org-similarity-recursive-search nil)
 #+end_src
+
 
 ** Usage
 
-Use =M-x org-similarity-insert-list RET= to insert a list of =org-mode= links to similar files at the end of your current buffer.
+In a buffer with an open =org-mode= file, type =M-x org-similarity-insert-list RET=.
 
-** License
+If this is the first time you run that command, it will ask you to install the necessary Python dependencies. By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
 
-Copyright 2020 Bruno Arine
+** Changelog
 
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+*** 2022-12-26 - v0.2
+- Automated installation of Python dependencies (using virtual environments).
+- Better =org-roam= v2 compatibility.
+- =orgparse= to parse org-mode files.
+- Refactored and optimized Python code.
 
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*** 2020-12-05 - v0.1-alpha
+- Alpha release of the package.
+- Tested with =org-roam= v1.
