@@ -11,15 +11,25 @@ from nltk.stem import SnowballStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-STOPWORDS = "stopwords.txt"
-JUNKCHARS = "junkchars.txt"
+STOPWORDS_FILENAME = "stopwords.txt"
+JUNKCHARS_FILENAME = "junkchars.txt"
 FILES_EXT = "*.org"
+SCRIPT_PATH = Path(__file__).parent
 
 # Fetches filenames in the same directory of the script
-stopwords = open(os.path.join(sys.path[0], STOPWORDS), "r").read().split("\n")
-junkchars = open(os.path.join(sys.path[0], JUNKCHARS), "r").read().split("\n")
-# remove empty element, which will probably exist in the file
-junkchars = [char for char in junkchars if char]
+def get_stopwords() -> list:
+    """Get a list of stopwords from STOPWORDS file."""
+    with open(SCRIPT_PATH / STOPWORDS_FILENAME, "r") as f:
+        stopwords = f.read().split("\n")
+    return stopwords
+
+def get_junkchars() -> list:
+    """Get a list of junk characters from JUNKCHARS file."""
+    with open(SCRIPT_PATH / JUNKCHARS_FILENAME, "r") as f:
+        junkchars = f.read().split("\n")
+        # remove empty element, which will probably exist in the file
+        junkchars = [char for char in junkchars if char]
+    return junkchars
 
 
 def parse_args():
@@ -85,15 +95,15 @@ def read_file(filename: Path) -> str:
         return open_file.read()
 
 
-def get_tokens(text, stemmer):
+def get_tokens(text, stemmer, junkchars: list, stopwords: list) -> list:
     """
     Preprocess a text and returns a list of tokens.
     """
-    # Lowercases and replaces the stupid apostrophe with a normal one.
+    text = text.lower()
+    # Replaces the stupid apostrophe with a normal one.
     # This step is needed because there's an Emacs package for posh people
     # that transforms every punctuation into fancy unicode symbols, and
     # this screws with the stopwords filter some lines below.
-    text = text.lower()
     text = text.replace("’", "'")
     # Remove org-mode front matter and other special characters
     # that could leak into the tokens list.
@@ -119,12 +129,13 @@ def get_scores(input_filename, target_filenames, stemmer):
     matrix with all found tokens via tf-idf algorithm (short for term
     frequency-inverse document frequency), which penalizes words that appear too
     often in a text."""
-
+    stopwords = get_stopwords()
+    junkchars = get_junkchars()
     base_document = orgparse.load(input_filename).get_body(format="plain")
     documents = [
         orgparse.load(f).get_body(format="plain") for f in target_filenames
     ]
-    tokenizer = functools.partial(get_tokens, stemmer=stemmer)
+    tokenizer = functools.partial(get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords)
     vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
 
     # To make uniformed vectors, both documents need to be combined first.
@@ -139,14 +150,16 @@ def format_results(
     input_path: Path,
     targets: Path,
     scores: np.ndarray,
+    num_results: int,
     id_links: bool,
     show_scores: bool,
 ) -> list:
     """Format results in an org-compatible format with links."""
     results = zip(scores, targets)
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
+    valid_results = sorted_results[:num_results]
     formatted_results = []
-    for score, target in sorted_results:
+    for score, target in valid_results:
         org_content = orgparse.load(target)
         title = org_content.get_file_property("title")
         score_output = f"{score:.3f} " if show_scores else ""
@@ -167,7 +180,7 @@ def main():
     args = parse_args()
     input_path = Path(args.input_filename)
     directory = Path(args.directory)
-    number_of_documents = args.number
+    num_results = args.number
     language = args.language
     show_scores = args.scores
     recursive = args.recursive
@@ -188,6 +201,7 @@ def main():
         input_path=input_path,
         targets=target_filenames,
         scores=scores,
+        num_results=num_results,
         show_scores=show_scores,
         id_links=id_links,
     )
