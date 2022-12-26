@@ -70,7 +70,7 @@
   :type 'boolean)
 
 (defcustom org-similarity-directory
-  org-directory
+  ""
   "Directory to scan for possibly similar documents."
   :type 'string)
 
@@ -79,42 +79,50 @@
   "Whether to prepend the list entries with their cosine similarity score."
   :type 'boolean)
 
-(defcustom org-similarity-id-links
+(defcustom org-similarity-use-id-links
   nil
   "Whether to show results as ID links instead of FILE links."
   :type 'boolean)
 
-(defvar org-similarity-directory
+(defvar org-similarity-package-path
   (file-name-directory
    (f-full (or load-file-name buffer-file-name)))
   "Org-similarity location.")
 
-(defun org-similarity--python-is-available ()
-  "Return t if Python is available."
-  (unless (executable-find "python")
-    (error "Org-similarity needs Python to run. Please, install Python"))
-  t)
+;; Dependency installation variables and functions
+
+(defvar org-similarity-python-interpreter
+  (concat org-similarity-package-path "venv/bin/python")
+  "Path to the Python executable that you want to use.")
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
   "Name of the buffer used for installing org-similarity dependencies.")
 
-(defcustom org-similarity-python-interpreter-path
-  "python"
-  "Path to the Python executable that you want to use."
-  :type 'string)
+(defun org-similarity--is-python-available ()
+  "Return t if Python is available."
+  (unless (executable-find "python")
+    (error "Org-similarity needs Python to run. Please, install Python"))
+  t)
+
+(defun org-similarity--is-deps-available ()
+  "Return t if requirements.txt packages are installed, nil otherwise."
+    (zerop (call-process org-similarity-python-interpreter nil nil nil
+                  (concat org-similarity-package-path "check_deps.py"))))
+(org-similarity--is-deps-available)
 
 (defun org-similarity-install-dependencies ()
   "Create environment and install Python dependencies and main script."
-  (when (org-similarity--python-is-available)
-(let* ((install-commands
-        (concat
-         "cd " org-similarity-directory "&& \
-         python -m venv venv && \
-         source venv/bin/activate && \
-         python -m pip install --upgrade pip && \
-         python -m pip install -r requirements.txt && \
-         cd -"))
+  (when (org-similarity--is-python-available)
+    (let* ((install-commands
+            (concat
+                "cd " org-similarity-package-path " && \
+                python -m venv venv && \
+                source venv/bin/activate && \
+                python -m pip install --upgrade pip && \
+                python -m pip install -r requirements.txt && \
+                python -m pip install . && \
+                cd -"))
        (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
@@ -123,32 +131,31 @@
                    (call-process "sh" nil buffer t "-c" install-commands)))
           (message "Installation of `org-similarity' Python dependencies succeeded")
         (error "Installation of `org-similarity' Python dependencies failed!")))))
-(org-similarity-install-dependencies)
 
 ;; If org-similarity dependencies are not installed yet, install them
-(unless (require 'org-similarity nil t)
+(unless (org-similarity--is-deps-available)
   (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
-      (progn
-        (org-similarity-install-dependencies)
-        (require 'org-similarity))
+      (org-similarity-install-dependencies)
     (error "Org-similarity won't work until its Python dependencies are downloaded!")))
+
+
+;; Main routine.
 
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
-  (end-of-buffer)
+  (goto-char (point-max))
   (newline)
-  (let ((command (format "%s -m org-similarity -i %s -d %s -l %s -n %s %s"
-                         org-similarity-python-interpreter-path
+  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
+                         org-similarity-python-interpreter
                          buffer-file-name
                          org-similarity-directory
                          org-similarity-language
                          org-similarity-number-of-documents
                          (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive"))))
-    (insert (shell-command-to-string command)))
-  (pop-global-mark)
-  )
+                         (if org-similarity-recursive-search "--recursive" "")
+                         (if org-similarity-use-id-links "--id-links" ""))))
+    (insert (shell-command-to-string command))))
 
 (provide 'org-similarity)
 
