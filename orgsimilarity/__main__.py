@@ -135,11 +135,11 @@ def get_scores(input_filename, target_filenames, stemmer):
     documents = [
         orgparse.load(f).get_body(format="plain") for f in target_filenames
     ]
-    tokenizer = functools.partial(get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords)
-    vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
-
     # To make uniformed vectors, both documents need to be combined first.
     documents.insert(0, base_document)
+
+    tokenizer = functools.partial(get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords)
+    vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
     embeddings = vectorizer.fit_transform(documents)
     scores = cosine_similarity(embeddings[0], embeddings[1:]).flatten()
 
