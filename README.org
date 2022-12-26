@@ -60,10 +60,10 @@ There are a few variables that can be set to customize how =org-similarity= oper
 
 ;; Whether the resulting list of similar documents will point to ID property or
 ;; filename. Default it nil.
-;; However, I recommend setting it to `t' if you use ;; `org-roam' v2.
+;; However, I recommend setting it to `t' if you use `org-roam' v2.
 (setq org-similarity-use-id-scores nil)
 
-;; Scan for files insie `org-similarity-directory' recursively.
+;; Scan for files inside `org-similarity-directory' recursively.
 (setq org-similarity-recursive-search nil)
 #+end_src
 
@@ -73,3 +73,15 @@ There are a few variables that can be set to customize how =org-similarity= oper
 In a buffer with an open =org-mode= file, type =M-x org-similarity-insert-list RET=.
 
 If this is the first time you run that command, it will ask you to install the necessary Python dependencies. By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
+
+** Changelog
+
+*** 2022-12-26 - v0.2
+- Automated installation of Python dependencies (using virtual environments).
+- Better =org-roam= v2 compatibility.
+- =orgparse= to parse org-mode files.
+- Refactored and optimized Python code.
+
+*** 2020-12-05 - v0.1-alpha
+- Alpha release of the package.
+- Tested with =org-roam= v1.
