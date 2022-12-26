@@ -7,7 +7,7 @@ import numpy as np
 import functools
 import orgparse
 
-from nltk.stem import SnowballStemmer
+from nltk.stem import SnowballStemmer, api
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -22,6 +22,7 @@ def get_stopwords() -> list:
     with open(SCRIPT_PATH / STOPWORDS_FILENAME, "r") as f:
         stopwords = f.read().split("\n")
     return stopwords
+
 
 def get_junkchars() -> list:
     """Get a list of junk characters from JUNKCHARS file."""
@@ -89,15 +90,21 @@ def parse_args():
     return p.parse_args()
 
 
-def read_file(filename: Path) -> str:
-    """Safely reads a filename and returns its content."""
-    with open(filename, "r") as open_file:
-        return open_file.read()
-
-
-def get_tokens(text, stemmer, junkchars: list, stopwords: list) -> list:
+def get_tokens(
+    text: str, stemmer: api.StemmerI, junkchars: list, stopwords: list
+) -> list:
     """
     Preprocess a text and returns a list of tokens.
+
+    Args:
+        text (str): Text whose tokens will be extracted from.
+        stemmer (nltk's stemmer): Stemmer provided by the nltk API.
+        junkchars (list): List of junk characters to be stripped from the text.
+        stopwords (list): List of stopwords to be removed from the text.
+
+    Returns:
+        List of tokens after the text has been pre-processed.
+
     """
     text = text.lower()
     # Replaces the stupid apostrophe with a normal one.
@@ -122,13 +129,28 @@ def get_tokens(text, stemmer, junkchars: list, stopwords: list) -> list:
     return tokens
 
 
-def get_scores(input_filename, target_filenames, stemmer):
+def get_scores(
+    input_filename: Path, target_filenames: Path, stemmer: api.StemmerI
+):
     """Create a document similarity table based on TF-IDF and cosine dist.
 
     This function scans the a directory for org files and creates a sparse
     matrix with all found tokens via tf-idf algorithm (short for term
     frequency-inverse document frequency), which penalizes words that appear too
-    often in a text."""
+    often in a text.
+
+    Args:
+        input_filename (Path): path to the filename that will be used as
+            reference.
+        target_filenames (Path): Glob containing the path to the documents
+            whose similarity with the input filename will be estimated.
+        stemmer (nltk stemmer): Instance of an nltk stemmer provided by the
+            nltk API.
+        
+    Returns:
+        List of similarity scores with the same number of documents in
+        target_filenames plus one (accounting for the input_filename).
+    """
     stopwords = get_stopwords()
     junkchars = get_junkchars()
     base_document = orgparse.load(input_filename).get_body(format="plain")
@@ -138,7 +160,9 @@ def get_scores(input_filename, target_filenames, stemmer):
     # To make uniformed vectors, both documents need to be combined first.
     documents.insert(0, base_document)
 
-    tokenizer = functools.partial(get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords)
+    tokenizer = functools.partial(
+        get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords
+    )
     vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
     embeddings = vectorizer.fit_transform(documents)
     scores = cosine_similarity(embeddings[0], embeddings[1:]).flatten()
@@ -154,7 +178,26 @@ def format_results(
     id_links: bool,
     show_scores: bool,
 ) -> list:
-    """Format results in an org-compatible format with links."""
+    """Format results in an org-compatible format with links.
+    
+    Args:
+        input_filename (Path): path to the filename that will be used as
+            reference.
+        target_filenames (Path): Glob containing the path to the documents
+            whose similarity with the input filename will be estimated.
+        scores (array-like): List of similarity scores with the same number of
+            documents in target_filenames plus one (accounting for the
+            input_filename).
+        num_results (int): How many similar entries to list at the end of the buffer.
+        id_links (bool): Whether the resulting list of similar documents will
+            point to ID property or filename. Recommend setting it to True
+            if you use `org-roam' v2.
+        show_scores (bool): Whether to prepend the results with the similarity score.
+    
+    Returns:
+        List of org formatted links to the most similar documents, sorted in descending
+        order of similarity.
+    """
     results = zip(scores, targets)
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
     valid_results = sorted_results[:num_results]
