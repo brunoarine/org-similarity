@@ -170,6 +170,19 @@ def get_scores(
     return scores
 
 
+def get_relative_path(source: Path, target: Path) -> Path:
+    """Get the relative path to target from a source.
+
+    Args:
+        source (Path): path to the reference filename.
+        target (Path): path to the target.
+    
+    Returns:
+        A Path object in relative path format.
+    """
+    return Path(os.path.relpath(target, source.parent))
+
+
 def format_results(
     input_path: Path,
     targets: Path,
@@ -211,7 +224,7 @@ def format_results(
             link_ref = f"id:{target_id}"
         else:
             # org-mode links use relative rather than absolute paths
-            target_rel_path = target.relative_to(input_path.parent)
+            target_rel_path = get_relative_path(source=input_path, target=target)
             link_ref = f"file:{target_rel_path}"
         entry = f"{score_output}[[{link_ref}][{title}]]"
         formatted_results.append(entry)
