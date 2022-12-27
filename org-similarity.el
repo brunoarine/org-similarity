@@ -90,7 +90,7 @@
 
 (defun org-similarity--is-python-available ()
   "Return t if Python is available."
-  (unless (executable-find "python")
+  (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
@@ -106,11 +106,11 @@
     (let* ((install-commands
             (concat
                 "cd " org-similarity-package-path " && \
-                python -m venv venv && \
+                python3 -m venv venv && \
                 source venv/bin/activate && \
-                python -m pip install --upgrade pip && \
-                python -m pip install -r requirements.txt && \
-                python -m pip install . && \
+                python3 -m pip install --upgrade pip && \
+                python3 -m pip install -r requirements.txt && \
+                python3 -m pip install . && \
                 cd -"))
        (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
       (pop-to-buffer buffer)
