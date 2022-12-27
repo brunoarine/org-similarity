@@ -61,7 +61,7 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; Whether the resulting list of similar documents will point to ID property or
 ;; filename. Default it nil.
 ;; However, I recommend setting it to `t' if you use `org-roam' v2.
-(setq org-similarity-use-id-scores nil)
+(setq org-similarity-use-id-links nil)
 
 ;; Scan for files inside `org-similarity-directory' recursively.
 (setq org-similarity-recursive-search nil)
