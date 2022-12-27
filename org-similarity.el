@@ -90,29 +90,29 @@
 
 (defun org-similarity--is-python-available ()
   "Return t if Python is available."
-  (unless (executable-find "python")
+  (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
 (defun org-similarity--is-deps-available ()
   "Return t if requirements.txt packages are installed, nil otherwise."
   (if (file-exists-p org-similarity-python-interpreter)
-    (zerop (call-process org-similarity-python-interpreter nil nil nil
-                  (concat org-similarity-package-path "check_deps.py"))) nil))
+      (zerop (call-process org-similarity-python-interpreter nil nil nil
+                           (concat org-similarity-package-path "check_deps.py"))) nil))
 
 (defun org-similarity-install-dependencies ()
   "Create environment and install Python dependencies and main script."
   (when (org-similarity--is-python-available)
     (let* ((install-commands
             (concat
-                "cd " org-similarity-package-path " && \
-                python -m venv venv && \
+             "cd " org-similarity-package-path " && \
+                python3 -m venv venv && \
                 source venv/bin/activate && \
-                python -m pip install --upgrade pip && \
-                python -m pip install -r requirements.txt && \
-                python -m pip install . && \
+                python3 -m pip install --upgrade pip && \
+                python3 -m pip install -r requirements.txt && \
+                python3 -m pip install . && \
                 cd -"))
-       (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
+           (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
       (if (zerop (let
@@ -129,11 +129,11 @@
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
-;; If org-similarity dependencies are not installed yet, install them
+  ;; If org-similarity dependencies are not installed yet, install them
   (unless (org-similarity--is-deps-available)
     (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
-      (org-similarity-install-dependencies)
-    (error "Org-similarity won't work until its Python dependencies are downloaded!")))
+        (org-similarity-install-dependencies)
+      (error "Org-similarity won't work until its Python dependencies are downloaded!")))
   (goto-char (point-max))
   (newline)
   (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
@@ -146,6 +146,24 @@
                          (if org-similarity-recursive-search "--recursive" "")
                          (if org-similarity-use-id-links "--id-links" ""))))
     (insert (shell-command-to-string command))))
+
+(defun org-similarity-sidebuffer ()
+  "Puts the results of org-similarity in a side-window."
+  (interactive)
+  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
+                         org-similarity-python-interpreter
+                         buffer-file-name
+                         org-similarity-directory
+                         org-similarity-language
+                         org-similarity-number-of-documents
+                         (if org-similarity-show-scores "--scores" "")
+                         (if org-similarity-recursive-search "--recursive" "")
+                         (if org-similarity-use-id-links "--id-links" ""))))
+    (setq similarity-results (shell-command-to-string command)))
+  (with-output-to-temp-buffer "*Similarity Results*"
+    (princ similarity-results))
+  (with-current-buffer "*Similarity Results*"
+    (org-mode)))
 
 (provide 'org-similarity)
 
