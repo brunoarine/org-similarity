@@ -59,7 +59,7 @@
   :type 'boolean)
 
 (defcustom org-similarity-directory
-  ""
+  "~/org"
   "Directory to scan for possibly similar documents."
   :type 'string)
 
