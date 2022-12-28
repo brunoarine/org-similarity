@@ -5,7 +5,7 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 ;; Version: 0.2
-;; Package-Requires: ((emacs "26.1"))
+;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
 ;; Keywords: matching, outlines, wp, org
 
 ;; 3-clause BSD License
