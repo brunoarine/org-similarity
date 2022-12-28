@@ -123,47 +123,41 @@
 
 
 
-
 ;; Main routine.
+
+(defun org-similarity--run-command ()
+  "Run org-similarity's Python script and return the COMMAND output as string."
+  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
+                         org-similarity--python-interpreter
+                         buffer-file-name
+                         org-similarity-directory
+                         org-similarity-language
+                         org-similarity-number-of-documents
+                         (if org-similarity-show-scores "--scores" "")
+                         (if org-similarity-recursive-search "--recursive" "")
+                         (if org-similarity-use-id-links "--id-links" ""))))
+    (shell-command-to-string command)))
 
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
   ;; If org-similarity dependencies are not installed yet, install them
-  (unless (org-similarity--is-deps-available)
+  (unless (org-similarity--deps-available-p)
     (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
         (org-similarity-install-dependencies)
       (error "Org-similarity won't work until its Python dependencies are downloaded!")))
   (goto-char (point-max))
   (newline)
-  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
-                         org-similarity-python-interpreter
-                         buffer-file-name
-                         org-similarity-directory
-                         org-similarity-language
-                         org-similarity-number-of-documents
-                         (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive" "")
-                         (if org-similarity-use-id-links "--id-links" ""))))
-    (insert (shell-command-to-string command))))
+  (insert (org-similarity--run-command)))
 
 (defun org-similarity-sidebuffer ()
   "Puts the results of org-similarity in a side-window."
   (interactive)
-  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
-                         org-similarity-python-interpreter
-                         buffer-file-name
-                         org-similarity-directory
-                         org-similarity-language
-                         org-similarity-number-of-documents
-                         (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive" "")
-                         (if org-similarity-use-id-links "--id-links" ""))))
-    (setq similarity-results (shell-command-to-string command)))
-  (with-output-to-temp-buffer "*Similarity Results*"
-    (princ similarity-results))
-  (with-current-buffer "*Similarity Results*"
-    (org-mode)))
+  (let ((results (org-similarity--run-command)))
+    (with-output-to-temp-buffer "*Similarity Results*"
+      (princ results))
+    (with-current-buffer "*Similarity Results*"
+      (org-mode))))
 
 (provide 'org-similarity)
 
