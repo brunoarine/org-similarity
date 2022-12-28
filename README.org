@@ -6,25 +6,13 @@
 
 ** Installation
 
+Clone the repository:
 
-*** straight.el
-
-#+begin_src elisp
-(straight-use-package
- '(org-similarity :type git :host github :repo "brunoarine/org-similarity"))
+#+begin_src sh
+git clone https://github.com/brunoarine/org-similarity
 #+end_src
 
-*** Doom Emacs
-
-  #+begin_src elisp
-(package! org-similarity
-  :recipe (:host github :repo "brunoarine/org-similarity"))
-  #+end_src
-  
-*** Local package loading
-
-You can load =org-similarity= by adding it to your =load-path=, and the manually loading it with =require=. If you would like to assist with development, this is the way to go. Paste the following instructions in your init file (e.g. =~/.emacs.d/init.el=):
-
+Then load the package by adding it to your =load-path= in your =init.el=:
 #+begin_src elisp
 (add-to-list 'load-path "/path/to/org-similarity")
 (require 'org-similarity)
