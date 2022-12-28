@@ -73,39 +73,44 @@
   "Whether to show results as ID links instead of FILE links."
   :type 'boolean)
 
-(defvar org-similarity-package-path
+(defcustom org-similarity-custom-python-interpreter
+  nil
+  "Override org-similarity default interpreter."
+  :type 'string)
+
+(defvar org-similarity--package-path
   (file-name-directory
    (f-full (or load-file-name buffer-file-name)))
   "Org-similarity location.")
 
-;; Dependency installation variables and functions
-
-(defvar org-similarity-python-interpreter
-  (concat org-similarity-package-path "venv/bin/python")
+(defvar org-similarity--python-interpreter
+  (concat org-similarity--package-path "venv/bin/python")
   "Path to the Python executable that you want to use.")
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
   "Name of the buffer used for installing org-similarity dependencies.")
 
-(defun org-similarity--is-python-available ()
+(defun org-similarity--python-available-p ()
   "Return t if Python is available."
   (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
-(defun org-similarity--is-deps-available ()
+(defun org-similarity--deps-available-p ()
   "Return t if requirements.txt packages are installed, nil otherwise."
-  (if (file-exists-p org-similarity-python-interpreter)
-      (zerop (call-process org-similarity-python-interpreter nil nil nil
-                           (concat org-similarity-package-path "check_deps.py"))) nil))
+  (if (file-exists-p org-similarity--python-interpreter)
+      (zerop (call-process org-similarity--python-interpreter nil nil nil
+                           (concat org-similarity--package-path "check_deps.py"))) nil))
+
+;; Main routine related functions
 
 (defun org-similarity-install-dependencies ()
   "Create environment and install Python dependencies and main script."
-  (when (org-similarity--is-python-available)
+  (when (org-similarity--python-available-p)
     (let* ((install-commands
             (concat
-             "cd " org-similarity-package-path " && \
+             "cd " org-similarity--package-path " && \
                 python3 -m venv venv && \
                 source venv/bin/activate && \
                 python3 -m pip install --upgrade pip && \
