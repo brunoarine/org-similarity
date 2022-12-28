@@ -85,18 +85,23 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Org-similarity location.")
 
 (defvar org-similarity--python-interpreter
-  (concat org-similarity--package-path "venv/bin/python")
+  (or org-similarity-custom-python-interpreter
+      (concat org-similarity--package-path "venv/bin/python"))
   "Path to the Python executable that you want to use.")
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
   "Name of the buffer used for installing org-similarity dependencies.")
 
-(defun org-similarity--python-available-p ()
-  "Return t if Python is available."
+(defun org-similarity--system-python-available-p ()
+  "Return t if Python is available in the system."
   (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
+
+(defun org-similarity--venv-python-available-p ()
+  "Check if designated virtual environment is available."
+  (file-exists-p org-similarity--python-interpreter))
 
 (defun org-similarity--deps-available-p ()
   "Return t if requirements.txt packages are installed, nil otherwise."
@@ -104,20 +109,10 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
       (zerop (call-process org-similarity--python-interpreter nil nil nil
                            (concat org-similarity--package-path "check_deps.py"))) nil))
 
-;; Main routine related functions
-
-(defun org-similarity-install-dependencies ()
+(defun org-similarity-create-local-venv ()
   "Create environment and install Python dependencies and main script."
-  (when (org-similarity--python-available-p)
-    (let* ((install-commands
-            (concat
-             "cd " org-similarity--package-path " && \
-                python3 -m venv venv && \
-                source venv/bin/activate && \
-                python3 -m pip install --upgrade pip && \
-                python3 -m pip install -r requirements.txt && \
-                python3 -m pip install . && \
-                cd -"))
+  (when (org-similarity--system-python-available-p)
+    (let* ((install-commands (concat (executable-find "python3") " -m venv " org-similarity--package-path "venv"))
            (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
@@ -127,31 +122,53 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
           (message "Installation of `org-similarity' Python dependencies succeeded")
         (error "Installation of `org-similarity' Python dependencies failed!")))))
 
+(defun org-similarity-install-dependencies ()
+  "Install Python dependencies inside the interpreter's environment."
+  (when (org-similarity--venv-python-available-p)
+    (let* ((install-commands (concat org-similarity--python-interpreter
+                                     " -m pip install --upgrade pip && "
+                                     org-similarity--python-interpreter
+                                     " -m pip install -r "
+                                     org-similarity--package-path
+                                     "requirements.txt"))
+           (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
+      (pop-to-buffer buffer)
+      (compilation-mode)
+      (if (zerop (let ((inhibit-read-only t))
+                   (call-process "sh" nil buffer t "-c" install-commands)))
+          (message "Installation of `org-similarity' Python dependencies succeeded")
+        (error "Installation of `org-similarity' Python dependencies failed!")))))
 
-
-;; Main routine.
+(defun org-similarity--check-interpreter-and-deps-status ()
+  "Perform interpreter and dependencies check, and install stuff if needed."
+  (progn
+    (unless (org-similarity--venv-python-available-p)
+      (org-similarity-create-local-venv))
+    (unless (org-similarity--deps-available-p)
+      (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
+          (org-similarity-install-dependencies)
+        (error "Org-similarity won't work until its Python dependencies are downloaded!")))))
 
 (defun org-similarity--run-command ()
   "Run org-similarity's Python script and return the COMMAND output as string."
-  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
-                         org-similarity--python-interpreter
-                         buffer-file-name
-                         org-similarity-directory
-                         org-similarity-language
-                         org-similarity-number-of-documents
-                         (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive" "")
-                         (if org-similarity-use-id-links "--id-links" ""))))
-    (shell-command-to-string command)))
+  (progn
+    (org-similarity--check-interpreter-and-deps-status)
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s %s %s %s"
+                           org-similarity--python-interpreter
+                           org-similarity--package-path
+                           buffer-file-name
+                           org-similarity-directory
+                           org-similarity-language
+                           org-similarity-number-of-documents
+                           (if org-similarity-show-scores "--scores" "")
+                           (if org-similarity-recursive-search "--recursive" "")
+                           (if org-similarity-use-id-links "--id-links" ""))))
+      (shell-command-to-string command))))
 
 (defun org-similarity-insert-list ()
   "Insert a list of 'org-mode' links to files that are similar to the buffer file."
   (interactive)
   ;; If org-similarity dependencies are not installed yet, install them
-  (unless (org-similarity--deps-available-p)
-    (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
-        (org-similarity-install-dependencies)
-      (error "Org-similarity won't work until its Python dependencies are downloaded!")))
   (goto-char (point-max))
   (newline)
   (insert (org-similarity--run-command)))
