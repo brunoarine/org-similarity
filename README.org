@@ -65,14 +65,26 @@ There are a few variables that can be set to customize how =org-similarity= oper
 
 ;; Scan for files inside `org-similarity-directory' recursively.
 (setq org-similarity-recursive-search nil)
+
+;; Filepath to a custom Python interpreter (e.g. '/path/to/venv/bin/python'
+;; If the package's requirements aren't met, `org-similarity' will try to
+;; install or upgrade them automatically. If `nil', the package will create
+;; and use a virtual environment inside `.emacs.d/.local'
+(setq org-similarity-custom-python-interpreter nil)
 #+end_src
 
 
 ** Usage
 
+*** Insert list of similar documents at the end of buffer
 In a buffer with an open =org-mode= file, type =M-x org-similarity-insert-list RET=.
 
 If this is the first time you run that command, it will ask you to install the necessary Python dependencies. By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
+
+*** Show list of similar documents in the sidebar
+In a buffer with an open =org-mode= file, type =M-x org-similarity-sidebuffer RET=.
+
+It will perform the same checks as above, but instead of inserting a list in the open buffer, it will create a new one with the links list.
 
 ** Changelog
 
@@ -80,6 +92,7 @@ If this is the first time you run that command, it will ask you to install the n
 - Automated installation of Python dependencies (using virtual environments).
 - Better =org-roam= v2 compatibility.
 - =orgparse= to parse org-mode files.
+- =org-similarity-sidebuffer= command will show results in a side buffer.
 - Refactored and optimized Python code.
 
 *** 2020-12-05 - v0.1-alpha
