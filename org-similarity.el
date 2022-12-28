@@ -5,8 +5,8 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 ;; Version: 0.2
-;; Package-Requires: ((f "0.20.0") (emacs "26.1"))
-;; Keywords: python, scikit-learn, tf-idf, similarity, org
+;; Package-Requires: ((emacs "26.1"))
+;; Keywords: matching, outlines, wp, org
 
 ;; 3-clause BSD License
 
