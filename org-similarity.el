@@ -75,7 +75,8 @@
 
 (defcustom org-similarity-custom-python-interpreter
   nil
-  "Override org-similarity default interpreter."
+  "Override org-similarity default interpreter.
+If nul, org-similarity will use a venv inside `emacs-local-directory'."
   :type 'string)
 
 (defvar org-similarity--package-path
