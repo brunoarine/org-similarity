@@ -107,7 +107,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Return t if requirements.txt packages are installed, nil otherwise."
   (if (file-exists-p org-similarity--python-interpreter)
       (zerop (call-process org-similarity--python-interpreter nil nil nil
-                           (concat org-similarity--package-path "check_deps.py"))) nil))
+                           (concat org-similarity--package-path "orgsimilarity/check_deps.py"))) nil))
 
 (defun org-similarity-create-local-venv ()
   "Create environment and install Python dependencies and main script."
