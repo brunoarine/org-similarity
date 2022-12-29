@@ -84,10 +84,10 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
    (f-full (or load-file-name buffer-file-name)))
   "Org-similarity location.")
 
-(defvar org-similarity--python-interpreter
+(defun org-similarity--get-python-interpreter ()
+  "Return the path to the most appropriate Python interpreter."
   (or org-similarity-custom-python-interpreter
-      (concat org-similarity--package-path "venv/bin/python"))
-  "Path to the Python executable that you want to use.")
+      (concat org-similarity--package-path "venv/bin/python")))
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
@@ -99,14 +99,14 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
-(defun org-similarity--venv-python-available-p ()
-  "Check if designated virtual environment is available."
-  (file-exists-p org-similarity--python-interpreter))
+(defun org-similarity--python-interpreter-available-p ()
+  "Check if designated Python interpreter is available."
+  (file-exists-p (org-similarity--get-python-interpreter)))
 
 (defun org-similarity--deps-available-p ()
   "Return t if requirements.txt packages are installed, nil otherwise."
-  (if (file-exists-p org-similarity--python-interpreter)
-      (zerop (call-process org-similarity--python-interpreter nil nil nil
+  (if (file-exists-p (org-similarity--get-python-interpreter))
+      (zerop (call-process (org-similarity--get-python-interpreter) nil nil nil
                            (concat org-similarity--package-path "orgsimilarity/check_deps.py"))) nil))
 
 (defun org-similarity-create-local-venv ()
@@ -124,10 +124,10 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 
 (defun org-similarity-install-dependencies ()
   "Install Python dependencies inside the interpreter's environment."
-  (when (org-similarity--venv-python-available-p)
-    (let* ((install-commands (concat org-similarity--python-interpreter
+  (when (org-similarity--python-interpreter-available-p)
+    (let* ((install-commands (concat (org-similarity--get-python-interpreter)
                                      " -m pip install --upgrade pip && "
-                                     org-similarity--python-interpreter
+                                     (org-similarity--get-python-interpreter)
                                      " -m pip install -r "
                                      org-similarity--package-path
                                      "requirements.txt"))
@@ -142,7 +142,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 (defun org-similarity--check-interpreter-and-deps-status ()
   "Perform interpreter and dependencies check, and install stuff if needed."
   (progn
-    (unless (org-similarity--venv-python-available-p)
+    (unless (org-similarity--python-interpreter-available-p)
       (org-similarity-create-local-venv))
     (unless (org-similarity--deps-available-p)
       (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
@@ -154,7 +154,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
     (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s %s %s %s"
-                           org-similarity--python-interpreter
+                           (org-similarity--get-python-interpreter)
                            org-similarity--package-path
                            buffer-file-name
                            org-similarity-directory
