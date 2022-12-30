@@ -48,6 +48,11 @@
   "The language passed to nltk's Snowball stemmer."
   :type 'string)
 
+(defcustom org-similarity-algorithm
+  "tfidf"
+  "Bag-of-words algorithm. Possible values: tfidf or bm25."
+  :type 'string)
+
 (defcustom org-similarity-number-of-documents
   10
   "How many similar entries to list at the end of the buffer."
@@ -153,13 +158,14 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run org-similarity's Python script and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s %s %s %s"
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s %s %s %s"
                            (org-similarity--get-python-interpreter)
                            org-similarity--package-path
                            buffer-file-name
                            org-similarity-directory
                            org-similarity-language
                            org-similarity-number-of-documents
+                           org-similarity-algorithm
                            (if org-similarity-show-scores "--scores" "")
                            (if org-similarity-recursive-search "--recursive" "")
                            (if org-similarity-use-id-links "--id-links" ""))))
