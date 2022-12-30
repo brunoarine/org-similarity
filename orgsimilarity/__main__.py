@@ -355,7 +355,7 @@ def main():
         model = Tfidf(processor=processor)
 
     # Add source content to list of possible words to avoid zero divisions.
-    model.fit(documents_content)
+    model.fit(documents_content + [source_content])
     scores = model.get_scores(source=source_content)
 
     formatted_results = format_results(
