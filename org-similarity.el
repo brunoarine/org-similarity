@@ -182,6 +182,12 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 (defun org-similarity-sidebuffer ()
   "Puts the results of org-similarity in a side-window."
   (interactive)
+  (add-to-list 'display-buffer-alist
+               '("*Similarity Results*"
+                 (display-buffer-in-side-window)
+                 (inhibit-same-window . t)
+                 (side . right)
+                 (window-width . 0.33)))
   (let ((results (org-similarity--run-command)))
     (with-output-to-temp-buffer "*Similarity Results*"
       (princ results))
