@@ -107,6 +107,11 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; install or upgrade them automatically. If `nil', the package will create
 ;; and use a virtual environment inside `.emacs.d/.local'
 (setq org-similarity-custom-python-interpreter nil)
+
+;;Remove first result from the scores list. Useful if the source document is
+;; inside the same directory as the target documents, and you don't want to see
+;; it included in the list for obvious reasons. Default is nil."
+(setq org-similarity-remove-first nil)
 #+end_src
 
 ** Benchmarking

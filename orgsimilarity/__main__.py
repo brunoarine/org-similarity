@@ -213,6 +213,7 @@ def format_results(
     num_results: int,
     id_links: bool,
     show_scores: bool,
+    remove_first: bool
 ) -> List[str]:
     """Format results in an org-compatible format with links.
 
@@ -229,14 +230,19 @@ def format_results(
             point to ID property or filename. Recommend setting it to True
             if you use `org-roam' v2.
         show_scores (bool): Whether to prepend the results with the similarity score.
+        remove_first (bool): Remove first result from the scores list. Useful if
+            the source document is inside the same directory as the target documents,
+            and you don't want to see it included in the list for obvious reasons.
+            Default is False.
 
     Returns:
         List of org formatted links to the most similar documents, sorted in descending
         order of similarity.
     """
+    remove_first = int(remove_first)
     results = zip(scores, targets)
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
-    valid_results = sorted_results[:num_results]
+    valid_results = sorted_results[remove_first:num_results+remove_first]
     formatted_results = []
     for score, target in valid_results:
         org_content = orgparse.load(target)
@@ -317,12 +323,18 @@ def parse_args():
         help="create ID links instead of FILE links (default: False)",
         required=False,
     )
+    p.add_argument(
+        "--remove-first",
+        "-f",
+        action="store_true",
+        help="remove first row from results (default: False)",
+        required=False,
+    )
     return p.parse_args()
 
 
 def main():
     """Execute main function."""
-
     args = parse_args()
     input_path = Path(args.input_filename)
     directory = Path(args.directory)
@@ -331,6 +343,7 @@ def main():
     show_scores = args.scores
     recursive = args.recursive
     id_links = args.id_links
+    remove_first = args.remove_first
 
     documents_glob = (
         directory.rglob(FILES_EXT) if recursive else directory.glob(FILES_EXT)
@@ -365,6 +378,7 @@ def main():
         num_results=num_results,
         show_scores=show_scores,
         id_links=id_links,
+        remove_first=remove_first
     )
 
     for entry in formatted_results:

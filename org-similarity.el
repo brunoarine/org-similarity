@@ -78,6 +78,15 @@
   "Whether to show results as ID links instead of FILE links."
   :type 'boolean)
 
+(defcustom org-similarity-remove-first
+  nil
+  "Remove first result from the scores list. 
+Useful if
+the source document is inside the same directory as the target documents,
+and you don't want to see it included in the list for obvious reasons.
+Default is False."
+  :type 'boolean)
+
 (defcustom org-similarity-custom-python-interpreter
   nil
   "Override org-similarity default interpreter.
@@ -168,6 +177,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-algorithm
                            (if org-similarity-show-scores "--scores" "")
                            (if org-similarity-recursive-search "--recursive" "")
+                           (if org-similarity-remove-first "--remove-first" "")
                            (if org-similarity-use-id-links "--id-links" ""))))
       (shell-command-to-string command))))
 
