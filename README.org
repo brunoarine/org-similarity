@@ -103,6 +103,15 @@ There are a few variables that can be set to customize how =org-similarity= oper
 (setq org-similarity-custom-python-interpreter nil)
 #+end_src
 
+** Benchmarking
+
+You can test the textual similarity algorithm employed in =org-similarity= by testing it against the [[http://ixa2.si.ehu.eus/stswiki/index.php/STSbenchmark][STSbenchmark]] dataset. Create a directory named =./data/raw= and extract the files in the dataset into it.
+
+After that, run:
+
+```sh
+make eval
+```
 
 ** Changelog
 
