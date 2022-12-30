@@ -115,9 +115,9 @@ You can test the textual similarity algorithm employed in =org-similarity= by te
 
 After that, run:
 
-```sh
+#+begin_src sh
 make eval
-```
+#+end_src
 
 ** Changelog
 
