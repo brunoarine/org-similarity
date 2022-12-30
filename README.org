@@ -82,6 +82,12 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; Spanish and Swedish.
 (setq org-similarity-language "english")
 
+;; Algorithm to use when generating the scores list. The possible choices are
+;; `tfidf' or `bm25'. Default is `tfidf' and it generally works better in
+;; most cases. However, `bm25' may be a bit more robust in rare cases, depending
+;; on the size of your notes.
+(setq org-similarity-algorithm "tfidf")
+
 ;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
 
