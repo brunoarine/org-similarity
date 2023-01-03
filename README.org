@@ -91,6 +91,12 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
 
+;; Minimum document size (in number of words) to be included in the corpus.
+;; The number of words is related to the document body, and doesn't included
+;; the file properties (not even the title).
+;; Default is 0 (include all documents, even the empty ones).
+(setq org-similarity-min-words 0)
+
 ;; Whether to prepend the list entries with similarity scores.
 (setq org-similarity-show-scores nil)
 
