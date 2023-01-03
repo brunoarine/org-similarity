@@ -3,6 +3,7 @@ import functools
 import os
 import re
 import sys
+from itertools import compress
 from pathlib import Path
 from typing import Callable, List
 
@@ -17,6 +18,12 @@ STOPWORDS_FILENAME = "stopwords.txt"
 JUNKCHARS_FILENAME = "junkchars.txt"
 FILES_EXT = "*.org"
 SCRIPT_PATH = Path(__file__).parent
+
+WORD_RE = re.compile(r"(?u)\b[a-z]{2,}\b")
+ORG_FILE_PROPERTY_RE = re.compile(r"#\+\w+:")
+ORG_FILE_PROPERTY_LINE_RE = re.compile(r"(?m)^#\+.*\n?")
+ORG_TAGS_RE = re.compile(r":[\w:]*:")
+URL_RE = re.compile(r"\S*https?:\S*")
 
 
 class Processor:
@@ -41,28 +48,23 @@ class Processor:
         self.stemmer = stemmer
         self.lemmatize = lemmatize
         self._lemmatizer = WordNetLemmatizer() if self.lemmatize else None
-
         self._stopwords_re = re.compile(
             r"\b(" + r"|".join(stopwords) + r")\b\s*"
         )
-        self._word_re = re.compile(r"(?u)\b[a-z]{2,}\b")
-        self._org_property_re = re.compile(r"#\+\w+:")
-        self._org_tags_re = re.compile(r":[\w:]*:")
-        self._url_re = re.compile(r"\S*https?:\S*")
 
     def preprocessor(self, text: str) -> str:
         """Remove fancy symbols and stopwords."""
         text = text.lower()
         text = text.translate({ord("’"): ord("'")})
-        text = self._org_property_re.sub("", text)
-        text = self._org_tags_re.sub("", text)
+        text = ORG_FILE_PROPERTY_RE.sub("", text)
+        text = ORG_TAGS_RE.sub("", text)
         text = self._stopwords_re.sub("", text)
-        text = self._url_re.sub("", text)
+        text = URL_RE.sub("", text)
         return text
 
     def _tokenize(self, text: str) -> List[str]:
         """Preprocess a text and returns a list of tokens."""
-        words = self._word_re.findall(text)
+        words = WORD_RE.findall(text)
         return words
 
     def _lemmatize(self, tokens: List[str]) -> List[str]:
@@ -172,6 +174,46 @@ class BM25:
         return results
 
 
+class Corpus:
+    """This wrapper provides easy access to a filtered corpus.
+
+    Args:
+        paths (list of Path): Documents paths.
+        min_words (int): Minimum document size (in number of words) to include
+            in the corpus. This number takes into account the number of words
+            in the document bodies only, and doesn't include any kind of file
+            properties (not even #+TITLE).
+
+    Properties:
+        documents_ (list of str): List of (un)filtered documents contents.
+        paths_ (list of Path): List of (un)filtered document paths.
+
+    """
+
+    def __init__(
+        self,
+        paths: List[Path],
+        min_words: int = 0,
+    ):
+        self.min_words = min_words
+
+        self.documents_ = [read_org_file(p) for p in paths]
+        self.paths_ = paths
+        if min_words:
+            self._apply_filter()
+
+    def _apply_filter(self):
+        """Apply min words filter in both documents and documents paths"""
+        stripped_docs = [
+            ORG_FILE_PROPERTY_LINE_RE.sub("", d) for d in self.documents_
+        ]
+        raw_tokens = [WORD_RE.findall(d) for d in stripped_docs]
+        tokens_count = np.array([len(t) for t in raw_tokens])
+        mask = (tokens_count > self.min_words).tolist()
+        self.documents_ = list(compress(self.documents_, mask))
+        self.paths_ = list(compress(self.paths_, mask))
+
+
 def read_org_file(filename: Path):
     document = orgparse.load(filename).get_body(format="plain")
     return document
@@ -213,7 +255,7 @@ def format_results(
     num_results: int,
     id_links: bool,
     show_scores: bool,
-    remove_first: bool
+    remove_first: bool,
 ) -> List[str]:
     """Format results in an org-compatible format with links.
 
@@ -242,7 +284,7 @@ def format_results(
     remove_first = int(remove_first)
     results = zip(scores, targets)
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
-    valid_results = sorted_results[remove_first:num_results+remove_first]
+    valid_results = sorted_results[remove_first : num_results + remove_first]
     formatted_results = []
     for score, target in valid_results:
         org_content = orgparse.load(target)
@@ -303,6 +345,14 @@ def parse_args():
         required=False,
     )
     p.add_argument(
+        "--min-words",
+        "-m",
+        type=int,
+        default=0,
+        help="minimum document size (in number of words) to be included in the corpus",
+        required=False,
+    )
+    p.add_argument(
         "--scores",
         "-s",
         action="store_true",
@@ -344,13 +394,14 @@ def main():
     recursive = args.recursive
     id_links = args.id_links
     remove_first = args.remove_first
+    min_words = args.min_words
 
     documents_glob = (
         directory.rglob(FILES_EXT) if recursive else directory.glob(FILES_EXT)
     )
     documents_paths = [f for f in documents_glob]
+    corpus = Corpus(paths=documents_paths, min_words=min_words)
     source_content = read_org_file(input_path)
-    documents_content = [read_org_file(p) for p in documents_paths]
 
     stemmer = SnowballStemmer(language).stem
     junkchars = get_junkchars()
@@ -368,17 +419,17 @@ def main():
         model = Tfidf(processor=processor)
 
     # Add source content to list of possible words to avoid zero divisions.
-    model.fit(documents_content + [source_content])
+    model.fit(corpus.documents_ + [source_content])
     scores = model.get_scores(source=source_content)
 
     formatted_results = format_results(
         input_path=input_path,
-        targets=documents_paths,
+        targets=corpus.paths_,
         scores=scores,
         num_results=num_results,
         show_scores=show_scores,
         id_links=id_links,
-        remove_first=remove_first
+        remove_first=remove_first,
     )
 
     for entry in formatted_results:

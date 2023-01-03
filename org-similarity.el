@@ -53,6 +53,11 @@
   "Bag-of-words algorithm. Possible values: tfidf or bm25."
   :type 'string)
 
+(defcustom org-similarity-min-words
+  0
+  "Minimum document size (in number of words) to be included in the corpus."
+  :type 'integer)
+
 (defcustom org-similarity-number-of-documents
   10
   "How many similar entries to list at the end of the buffer."
@@ -167,7 +172,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run org-similarity's Python script and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s %s %s %s"
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s %s %s %s"
                            (org-similarity--get-python-interpreter)
                            org-similarity--package-path
                            buffer-file-name
@@ -175,6 +180,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-language
                            org-similarity-number-of-documents
                            org-similarity-algorithm
+                           org-similarity-min-words
                            (if org-similarity-show-scores "--scores" "")
                            (if org-similarity-recursive-search "--recursive" "")
                            (if org-similarity-remove-first "--remove-first" "")
