@@ -1,3 +1,4 @@
+from rank_bm25 import BM25Okapi
 import argparse
 import functools
 import os
@@ -117,61 +118,26 @@ class Tfidf:
 
 
 class BM25:
-    """Implementation of OKapi BM25 with Scikit-learn's TfidfVectorizer.
-
-    Author: Yuta Koreeda
-    URL: https://gist.github.com/koreyou/f3a8a0470d32aa56b32f198f49a9f2b8
+    """Okapi BM25 wrapper.
 
     Args:
         processor (Processor): Processor object.
-        b (float): Free parameter. Default is 0.75.
-        k1 (float): Free parameter. Recommended value is between 1.2 and 2.0.
-        normalize (bool): Divide the results by the maximum value so it sits
-            in the range between 0 and 1.
     """
 
-    def __init__(self, processor, b=0.75, k1=1.6, normalize=True, **kwargs):
+    def __init__(self, processor):
         self.processor = processor
-        self.normalize = normalize
-
-        self._vectorizer = TfidfVectorizer(
-            tokenizer=self.processor.tokenizer,
-            preprocessor=self.processor.preprocessor,
-            token_pattern=None,
-            norm=None,
-            smooth_idf=False,
-            **kwargs,
-        )
-        self.b = b
-        self.k1 = k1
 
     def fit(self, documents: List[str]):
         """Fit IDF to documents X"""
-        self._vectorizer.fit(documents)
-        self.embeddings_ = self._vectorizer.transform(documents)
-        self.avdl = self.embeddings_.sum(1).mean()
+        clean_docs = [self.processor.preprocessor(d) for d in documents]
+        tokenized_docs = [self.processor.tokenizer(d) for d in clean_docs]
+        self._model = BM25Okapi(tokenized_docs)
 
     def get_scores(self, source: str):
-        """Calculate BM25 between query q and documents X"""
-        b, k1, avdl = self.b, self.k1, self.avdl
-
-        len_X = self.embeddings_.sum(1).A1
-        (q,) = self._vectorizer.transform([source])
-        assert sparse.isspmatrix_csr(q)
-
-        # Convert to csc for better column slicing
-        csc_embeddings_ = self.embeddings_.tocsc()[:, q.indices]
-        denom = csc_embeddings_ + (k1 * (1 - b + b * len_X / avdl))[:, None]
-        # idf(t) = log [ n / df(t) ] + 1 in sklearn, so it need to be coneverted
-        # to idf(t) = log [ n / df(t) ] with minus 1
-        idf = self._vectorizer._tfidf.idf_[None, q.indices] - 1
-        numer = csc_embeddings_.multiply(
-            np.broadcast_to(idf, csc_embeddings_.shape)
-        ) * (k1 + 1)
-        results = (numer / denom).sum(1).A1
-        if self.normalize:
-            results /= results.max()
-        return results
+        clean_source = self.processor.preprocessor(source)
+        tokenized_source = self.processor.tokenizer(clean_source)
+        scores = self._model.get_scores(tokenized_source)
+        return scores
 
 
 class Corpus:
@@ -289,7 +255,7 @@ def format_results(
     for score, target in valid_results:
         org_content = orgparse.load(target)
         title = org_content.get_file_property("title")
-        score_output = f"{score:.3f} " if show_scores else ""
+        score_output = f"{score:.2f} " if show_scores else ""
         if id_links:
             target_id = org_content.get_property("ID")
             link_ref = f"id:{target_id}"
