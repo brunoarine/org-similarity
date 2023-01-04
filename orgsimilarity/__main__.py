@@ -255,7 +255,7 @@ def format_results(
     for score, target in valid_results:
         org_content = orgparse.load(target)
         title = org_content.get_file_property("title")
-        score_output = f"{score:.3f} " if show_scores else ""
+        score_output = f"{score:.2f} " if show_scores else ""
         if id_links:
             target_id = org_content.get_property("ID")
             link_ref = f"id:{target_id}"
