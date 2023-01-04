@@ -118,17 +118,10 @@ class Tfidf:
 
 
 class BM25:
-    """Implementation of OKapi BM25 with Scikit-learn's TfidfVectorizer.
-
-    Author: Yuta Koreeda
-    URL: https://gist.github.com/koreyou/f3a8a0470d32aa56b32f198f49a9f2b8
+    """Okapi BM25 wrapper.
 
     Args:
         processor (Processor): Processor object.
-        b (float): Free parameter. Default is 0.75.
-        k1 (float): Free parameter. Recommended value is between 1.2 and 2.0.
-        normalize (bool): Divide the results by the maximum value so it sits
-            in the range between 0 and 1.
     """
 
     def __init__(self, processor):
