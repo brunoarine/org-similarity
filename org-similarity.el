@@ -172,7 +172,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run org-similarity's Python script and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s %s %s %s"
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s %s %s %s %s"
                            (org-similarity--get-python-interpreter)
                            org-similarity--package-path
                            buffer-file-name
