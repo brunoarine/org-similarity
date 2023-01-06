@@ -231,6 +231,13 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
     (newline)
     (insert (org-similarity--run-command filename))))
 
+(defun org-similarity-query ()
+  "Show documents similar to a query in the side buffer."
+  (interactive)
+  (let ((filename (org-similarity--save-query-to-temp))
+        (org-similarity-remove-first nil))
+    (org-similarity--show-sidebuffer filename)))
+
 (provide 'org-similarity)
 
 ;;; org-similarity.el ends here

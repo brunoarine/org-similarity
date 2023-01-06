@@ -67,6 +67,9 @@ In a buffer with an open =org-mode= file, type =M-x org-similarity-sidebuffer RE
 
 It will perform the same checks as above, but instead of inserting a list in the open buffer, it will create a new one with the links list.
 
+*** Show list of documents that are similar to a search query
+When you type =M-x org-similarity-query=, you'll be able to input a word or sentence, and =org-similarity= will fetch related documents in the side buffer.
+
 ** Configuration
 
 There are a few variables that can be set to customize how =org-similarity= operates and generates the list of similar documents:
