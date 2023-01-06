@@ -168,14 +168,14 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
           (org-similarity-install-dependencies)
         (error "Org-similarity won't work until its Python dependencies are downloaded!")))))
 
-(defun org-similarity--run-command ()
-  "Run org-similarity's Python script and return the COMMAND output as string."
+(defun org-similarity--run-command (filename)
+  "Run Python routine on FILENAME and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
     (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s %s %s %s %s"
                            (org-similarity--get-python-interpreter)
                            org-similarity--package-path
-                           buffer-file-name
+                           filename
                            org-similarity-directory
                            org-similarity-language
                            org-similarity-number-of-documents
@@ -187,28 +187,49 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            (if org-similarity-use-id-links "--id-links" ""))))
       (shell-command-to-string command))))
 
-(defun org-similarity-insert-list ()
-  "Insert a list of 'org-mode' links to files that are similar to the buffer file."
-  (interactive)
-  ;; If org-similarity dependencies are not installed yet, install them
-  (goto-char (point-max))
-  (newline)
-  (insert (org-similarity--run-command)))
+(defun org-similarity--save-buffer-to-temp ()
+  "Write buffer to a temp file and return the path to that file."
+  (let ((tmpfile (make-temp-file "simil"))
+        (inhibit-message t)     ;Don't show the messages in Echo area
+        (message-log-max nil))  ;Don't show the messages in the *Messages* buffer
+    (write-region (point-min) (point-max) tmpfile)
+    (identity tmpfile)))
 
-(defun org-similarity-sidebuffer ()
-  "Puts the results of org-similarity in a side-window."
-  (interactive)
+(defun org-similarity--save-query-to-temp ()
+  "Write buffer to a temp file and return the path to that file."
+  (let ((tmpfile (make-temp-file "simil"))
+        (inhibit-message t)     ;Don't show the messages in Echo area
+        (message-log-max nil)) ;Don't show the messages in the *Messages* buffer
+    (f-write-text (read-string "org-similarity query: ") 'utf-8 tmpfile)
+    (identity tmpfile)))
+
+(defun org-similarity--show-sidebuffer (filename)
+  "Search similar documents related to FILENAME and puts results in a side buffer."
   (add-to-list 'display-buffer-alist
                '("*Similarity Results*"
                  (display-buffer-in-side-window)
                  (inhibit-same-window . t)
                  (side . right)
                  (window-width . 0.33)))
-  (let ((results (org-similarity--run-command)))
+  (let ((results (org-similarity--run-command filename)))
     (with-output-to-temp-buffer "*Similarity Results*"
       (princ results))
     (with-current-buffer "*Similarity Results*"
       (org-mode))))
+
+(defun org-similarity-sidebuffer ()
+  "Show a list of documents similar to the current buffer in a side buffer."
+  (interactive)
+  (let ((filename (org-similarity--save-buffer-to-temp)))
+    (org-similarity--show-sidebuffer filename)))
+
+(defun org-similarity-insert-list ()
+  "Create a list of documents similar to the current buffer at the end of it."
+  (interactive)
+  (let ((filename (org-similarity--save-buffer-to-temp)))
+    (goto-char (point-max))
+    (newline)
+    (insert (org-similarity--run-command filename))))
 
 (provide 'org-similarity)
 
