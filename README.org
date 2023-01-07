@@ -114,14 +114,27 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; Filepath to a custom Python interpreter (e.g. '/path/to/venv/bin/python'
 ;; If the package's requirements aren't met, `org-similarity' will try to
 ;; install or upgrade them automatically. If `nil', the package will create
-;; and use a virtual environment inside `.emacs.d/.local'
+;; and use a virtual environment in the same directory where `org-similarity'
+;; is located (usually `~/.emacs.d/.local' if you installed via a package
+;; manager, or in the path where you cloned this repo and loaded the package
+;; manually).
 (setq org-similarity-custom-python-interpreter nil)
 
-;;Remove first result from the scores list. Useful if the source document is
+;; Remove first result from the scores list. Useful if the source document is
 ;; inside the same directory as the target documents, and you don't want to see
 ;; it included in the list for obvious reasons. Default is nil."
 (setq org-similarity-remove-first nil)
+
+;; Show a heading above the list. You can set it to "" if you
+;; wish to hide the heading altogether.
+(setq org-similarity-header "** Related notes")
+
+;; String to prepend the list items. You can set it to "* " to turn each
+;; item into org-mode headings, or "- " to turn them into an org-mode list.
+;; Set the variable to "" if remove any prefix to the list items.
+(setq org-similarity-prefix "- ")
 #+end_src
+
 
 ** Benchmarking
 

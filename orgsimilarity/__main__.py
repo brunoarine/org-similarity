@@ -222,6 +222,8 @@ def format_results(
     id_links: bool,
     show_scores: bool,
     remove_first: bool,
+    prefix: str = "",
+    heading: str = "",
 ) -> List[str]:
     """Format results in an org-compatible format with links.
 
@@ -242,6 +244,8 @@ def format_results(
             the source document is inside the same directory as the target documents,
             and you don't want to see it included in the list for obvious reasons.
             Default is False.
+        prefix (str): Prefix to add to each item in the printed list.
+        heading (str): List heading (title).
 
     Returns:
         List of org formatted links to the most similar documents, sorted in descending
@@ -252,6 +256,8 @@ def format_results(
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
     valid_results = sorted_results[remove_first : num_results + remove_first]
     formatted_results = []
+    print(heading)
+    print()
     for score, target in valid_results:
         org_content = orgparse.load(target)
         title = org_content.get_file_property("title")
@@ -265,7 +271,7 @@ def format_results(
                 source=input_path, target=target
             )
             link_ref = f"file:{target_rel_path}"
-        entry = f"{score_output}[[{link_ref}][{title}]]"
+        entry = f"{prefix}{score_output}[[{link_ref}][{title}]]"
         formatted_results.append(entry)
     return formatted_results
 
@@ -319,6 +325,21 @@ def parse_args():
         required=False,
     )
     p.add_argument(
+        "--prefix",
+        "-p",
+        type=str,
+        default="",
+        help="item prefix",
+        required=False,
+    )
+    p.add_argument(
+        "--heading",
+        type=str,
+        default="",
+        help="list heading",
+        required=False,
+    )
+    p.add_argument(
         "--scores",
         "-s",
         action="store_true",
@@ -361,6 +382,8 @@ def main():
     id_links = args.id_links
     remove_first = args.remove_first
     min_words = args.min_words
+    prefix = args.prefix
+    heading = args.heading
 
     documents_glob = (
         directory.rglob(FILES_EXT) if recursive else directory.glob(FILES_EXT)
@@ -396,6 +419,8 @@ def main():
         show_scores=show_scores,
         id_links=id_links,
         remove_first=remove_first,
+        prefix=prefix,
+        heading=heading,
     )
 
     for entry in formatted_results:
