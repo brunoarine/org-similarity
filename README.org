@@ -1,33 +1,59 @@
-* org-similarity
+#+TITLE: org-similarity
 
-=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]] for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.
+=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users (re)discover similar documents in relation to the current buffer or to an input query using semantic textual similarity algorithms.
 
+#+ATTR_HTML: :style margin-left: auto; margin-right: auto;
 [[./assets/example.gif]]
+
+** Table of contents :TOC:
+  - [[#introduction][Introduction]]
+  - [[#pre-requisites][Pre-requisites]]
+  - [[#installation][Installation]]
+  - [[#loading-the-package][Loading the package]]
+  - [[#usage][Usage]]
+  - [[#configuration][Configuration]]
+  - [[#benchmarking][Benchmarking]]
+  - [[#changelog][Changelog]]
+
+** Introduction
+
+A good note-taking system should help you connect your ideas. But what if you have many years worth of notes in your computer, and you can't remember the older ones?
+
+That's why I've written =org-similarity=. As an avid =org-roam= user with more than a thousand notes, I can't count on my brain to recall them all.
+
+=org-similarity= makes it easier to retrieve those long forgotten files that are possibly buried in everyone's piles of notes. It's different from a simple keyword search, since it uses Python modules like [[https://github.com/nltk/nltk][nltk]] and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text preprocessing and semantic features extraction. More specifically, =org-similarity= remove stopwords and undesirable characters, tokenize the document with word stems, and only then calculate similarity scores while applying correction factors based on document and word frequency.
+
+** Pre-requisites
+
+- Emacs 27.1+
+- Python 3.6+
+- Git 2.23+ (for manual installation)
+
 
 ** Installation
 
-You can install this package using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, or =develop= with the latest additions. Just replace the branch name wherever it appears in the snippets below.
+You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, or =develop= for a version with the latest additions. Just replace the branch name with *main* or *develop* wherever it appears in the snippets below.
 
-*** Using straight.el
+*Using straight.el*
 
 Add the following to your =init.el=:
 
 #+begin_src elisp
 (straight-use-package '(org-similarity :type git :host github :repo
- "brunoarine/org-similarity" :branch "develop" :files ("*.el" "*.txt"
+ "brunoarine/org-similarity" :branch "main" :files ("*.el" "*.txt"
  "orgsimilarity")))
 #+end_src
 
-*** Doom Emacs
+*Doom Emacs*
 
-Or if you are using Doom Emacs, add the following to =packages.el=:
+Add the following to =packages.el=:
 
 #+begin_src elisp
 (package! org-similarity :recipe (:host github :repo "brunoarine/org-similarity"
-   :branch "develop" :files ("*.el" "*.txt" "orgsimilarity")))
+   :branch "main" :files ("*.el" "*.txt" "orgsimilarity")))
 #+end_src
 
-*** Manual installation
+*Manual installation*
 
 Clone the repository:
 
@@ -57,18 +83,14 @@ Or using =use-package=:
 
 ** Usage
 
-*** Insert list of similar documents at the end of buffer
-In a buffer with an open =org-mode= file, type =M-x org-similarity-insert-list RET=.
+Upon running the commands below for the first time, =org-similarity=
+will ask you to install the necessary Python dependencies (if they are not found in the configured environment---see [[#configuration][Configuration]] for more info). By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
 
-If this is the first time you run that command, it will ask you to install the necessary Python dependencies. By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
-
-*** Show list of similar documents in the sidebar
-In a buffer with an open =org-mode= file, type =M-x org-similarity-sidebuffer RET=.
-
-It will perform the same checks as above, but instead of inserting a list in the open buffer, it will create a new one with the links list.
-
-*** Show list of documents that are similar to a search query
-When you type =M-x org-similarity-query=, you'll be able to input a word or sentence, and =org-similarity= will fetch related documents in the side buffer.
+| Command                          | Description                                                                           |
+|----------------------------------+---------------------------------------------------------------------------------------|
+| =M-x org-similarity-insert-list= | Inserts a list of files that are similar to the current buffer at the end of it.      |
+| =M-x org-similarity-sidebuffer=  | Shows a list of files that are similar to the current buffer in a side buffer.        |
+| =M-x org-similarity-query=       | Lets the user input a query and shows a list of related documents in the side buffer. |
 
 ** Configuration
 
@@ -104,7 +126,7 @@ There are a few variables that can be set to customize how =org-similarity= oper
 (setq org-similarity-show-scores nil)
 
 ;; Whether the resulting list of similar documents will point to ID property or
-;; filename. Default it nil.
+;; filename. Default is nil.
 ;; However, I recommend setting it to `t' if you use `org-roam' v2.
 (setq org-similarity-use-id-links nil)
 
@@ -120,18 +142,18 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; manually).
 (setq org-similarity-custom-python-interpreter nil)
 
-;; Remove first result from the scores list. Useful if the source document is
-;; inside the same directory as the target documents, and you don't want to see
-;; it included in the list for obvious reasons. Default is nil."
+;; Remove first result from the scores list. Useful if the current buffer is
+;; saved in the searched directory, and you don't want to see it included
+;; in the list. Default is nil."
 (setq org-similarity-remove-first nil)
 
-;; Show a heading above the list. You can set it to "" if you
+;; Text to show in the list heading. You can set it to "" if you
 ;; wish to hide the heading altogether.
-(setq org-similarity-header "** Related notes")
+(setq org-similarity-heading "** Related notes")
 
 ;; String to prepend the list items. You can set it to "* " to turn each
-;; item into org-mode headings, or "- " to turn them into an org-mode list.
-;; Set the variable to "" if remove any prefix to the list items.
+;; item into org headings, or "- " to turn them into an unordered org list.
+;; Set the variable to "" to hide prefixes.
 (setq org-similarity-prefix "- ")
 #+end_src
 
