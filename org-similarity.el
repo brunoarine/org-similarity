@@ -98,6 +98,16 @@ Default is False."
 If nul, org-similarity will use a venv inside `emacs-local-directory'."
   :type 'string)
 
+(defcustom org-similarity-prefix
+  "- "
+  "Items prefix in the similarity list when inserted in the current buffer."
+  :type 'string)
+
+(defcustom org-similarity-heading
+  "** Related notes"
+  "Text to add before the inserted list."
+  :type 'string)
+
 (defvar org-similarity--package-path
   (file-name-directory
    (f-full (or load-file-name buffer-file-name)))
@@ -172,7 +182,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run Python routine on FILENAME and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s %s %s %s %s"
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s -p '%s' --heading '%s' %s %s %s %s"
                            (org-similarity--get-python-interpreter)
                            org-similarity--package-path
                            filename
@@ -181,6 +191,8 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-number-of-documents
                            org-similarity-algorithm
                            org-similarity-min-words
+                           org-similarity-prefix
+                           org-similarity-heading
                            (if org-similarity-show-scores "--scores" "")
                            (if org-similarity-recursive-search "--recursive" "")
                            (if org-similarity-remove-first "--remove-first" "")
@@ -211,7 +223,9 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                  (inhibit-same-window . t)
                  (side . right)
                  (window-width . 0.33)))
-  (let ((results (org-similarity--run-command filename)))
+  (let* ((org-similarity-heading "Similarity results")
+         (org-similarity-prefix "")
+         (results (org-similarity--run-command filename)))
     (with-output-to-temp-buffer "*Similarity Results*"
       (princ results))
     (with-current-buffer "*Similarity Results*"
