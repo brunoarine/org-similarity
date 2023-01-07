@@ -86,10 +86,9 @@
 (defcustom org-similarity-remove-first
   nil
   "Remove first result from the scores list.
-Useful if
-the source document is inside the same directory as the target documents,
-and you don't want to see it included in the list for obvious reasons.
-Default is False."
+Useful if the source document is inside the same directory as the target
+documents, and you don't want to see it included in the list for obvious
+reasons.  Default is False."
   :type 'boolean)
 
 (defcustom org-similarity-custom-python-interpreter
