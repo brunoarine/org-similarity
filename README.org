@@ -101,8 +101,13 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; org-roam users might want to change it to `org-roam-directory'.
 (setq org-similarity-directory org-directory)
 
-;; The language passed to the Snowball stemmer in the `nltk' package.  The
-;; following languages are supported: Arabic, Danish, Dutch, English, Finnish,
+;; Filename extension to scan for similar text. By default, it will
+;; only scan Org-mode files, but you can change it to scan other
+;; kind of files as well.
+(setq org-similarity-file-extension-pattern "*.org")
+
+;; Changing this value will impact stopwords filtering and word stemmer.
+;; The following languages are supported: Arabic, Danish, Dutch, English, Finnish,
 ;; French, German, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian,
 ;; Spanish and Swedish.
 (setq org-similarity-language "english")
@@ -116,14 +121,18 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
 
-;; Minimum document size (in number of words) to be included in the corpus.
-;; The number of words is related to the document body, and doesn't included
-;; the file properties (not even the title).
-;; Default is 0 (include all documents, even the empty ones).
-(setq org-similarity-min-words 0)
+;; Minimum document size (in number of characters) to be included in the corpus.
+;; It includes every character, including the file properties drawer.
+;; Default is 0 (include all documents, even empty ones).
+(setq org-similarity-min-chars 0)
 
 ;; Whether to prepend the list entries with similarity scores.
 (setq org-similarity-show-scores nil)
+
+;; Similarity score threshold. All results with a similarity score below this
+;; value will be omitted from the final list.
+;; Default is 0.05.
+(setq org-similarity-threshold 0.05)
 
 ;; Whether the resulting list of similar documents will point to ID property or
 ;; filename. Default is nil.
