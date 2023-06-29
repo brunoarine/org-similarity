@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="org-similarity",
-    version="0.2",
+    version="0.3",
     author="Bruno Arine",
     author_email="bruno.arine@runbox.com",
     packages=["orgsimilarity"],

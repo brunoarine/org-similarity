@@ -170,6 +170,20 @@ make eval
 
 ** Changelog
 
+*** 2023-06-29 - v1.0.0
+- Added BM25 as an alternative algorithm.
+- Added heading and prefix options.
+- Formatted the score as a floating point number with two decimal places.
+- Implemented a filter for minimum words.
+- Added the `org-similarity-remove-first` option.
+- Changed the default directory to ~/org.
+- Decoupled the interpreter and dependency checks from the main function.
+- Renamed predicate functions for clarity.
+- Refactored command, executable, and dependency checks.
+- Removed null entries from `junkchars` and `stopwords`.
+- Implemented a benchmarking routine.
+- Several bug fixes.
+
 *** 2022-12-26 - v0.2
 - Automated installation of Python dependencies (using virtual environments).
 - Better =org-roam= v2 compatibility.
