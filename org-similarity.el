@@ -64,7 +64,7 @@ This variable replaces the obsolete `org-similarity-min-words' var since version
 1.0, where `org-similarity' began to use `findlike' as backend. As a suggestion,
 multiply the minimum number of words by 5 (the average length of words in the
 English language) to get an approximate minum number of characters."
-:type 'integer)
+  :type 'integer)
 
 (make-obsolete-variable 'org-similarity-min-words 'org-similarity-min-chars "1.0.0")
 
@@ -219,7 +219,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-number-of-documents
                            org-similarity-algorithm
                            (if (boundp 'org-similarity-min-words)
-                             (* org-similarity-min-words 5)
+                               (* org-similarity-min-words 5)
                              org-similarity-min-chars)
                            (if org-similarity-show-scores "-s" "")
                            (if org-similarity-recursive-search "-R" "")
@@ -318,8 +318,8 @@ Use ID property instead of file path if USE-ID is non-nil."
   "Create a list of documents similar to the current buffer at the end of it."
   (interactive)
   (let* ((filename (org-similarity--save-buffer-to-temp))
-        (results (org-similarity--run-command filename))
-        (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
+         (results (org-similarity--run-command filename))
+         (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
     (goto-char (point-max))
     (newline)
     (insert formatted-results)))
