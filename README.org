@@ -32,7 +32,7 @@ That's why I've written =org-similarity=. As an avid =org-roam= user with more t
 
 ** Installation
 
-You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, =develop= for the latest additions, or ={RELEASE_VERSION} for a specific release version (e.g. =v1.0.0=). Just replace the =branch= property accordingly in the instructions below.
+You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, =develop= for the latest additions, or ={RELEASE_VERSION}= for a specific release version (e.g. =v1.0.0=). Just replace the =branch= property accordingly in the instructions below.
 
 *Using straight.el*
 
@@ -175,12 +175,12 @@ make eval
 - Added heading and prefix options.
 - Formatted the score as a floating point number with two decimal places.
 - Implemented a filter for minimum words.
-- Added the `org-similarity-remove-first` option.
+- Added the =org-similarity-remove-first= option.
 - Changed the default directory to ~/org.
 - Decoupled the interpreter and dependency checks from the main function.
 - Renamed predicate functions for clarity.
 - Refactored command, executable, and dependency checks.
-- Removed null entries from `junkchars` and `stopwords`.
+- Removed null entries from =junkchars= and =stopwords=.
 - Implemented a benchmarking routine.
 - Several bug fixes.
 
