@@ -1,29 +1,96 @@
-* org-similarity
+#+TITLE: org-similarity
 
-=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users discover similar or related files. Under the hood, it uses Python and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text feature extraction, and [[https://github.com/nltk/nltk][nltk]] for text pre-processing. More specifically, this package provides a function to recursively scan a given directory for =org= files, clean their content by stripping the front matter and some undesired characters, tokenize them, replace each token with its respective linguistic stem, generate a TF-IDF sparse matrix, and calculate the cosine similarity between these documents and the buffer you are currently working on.
+=org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users (re)discover similar documents in relation to the current buffer or to an input query using semantic textual similarity algorithms.
 
+#+ATTR_HTML: :style margin-left: auto; margin-right: auto;
 [[./assets/example.gif]]
 
+** Table of contents :TOC:
+  - [[#introduction][Introduction]]
+  - [[#pre-requisites][Pre-requisites]]
+  - [[#installation][Installation]]
+  - [[#loading-the-package][Loading the package]]
+  - [[#usage][Usage]]
+  - [[#configuration][Configuration]]
+  - [[#benchmarking][Benchmarking]]
+  - [[#changelog][Changelog]]
+
+** Introduction
+
+A good note-taking system should help you connect your ideas. But what if you have many years worth of notes in your computer, and you can't remember the older ones?
+
+That's why I've written =org-similarity=. As an avid =org-roam= user with more than a thousand notes, I can't count on my brain to recall them all.
+
+=org-similarity= makes it easier to retrieve those long forgotten files that are possibly buried in everyone's piles of notes. It's different from a simple keyword search, since it uses Python modules like [[https://github.com/nltk/nltk][nltk]] and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text preprocessing and semantic features extraction. More specifically, =org-similarity= remove stopwords and undesirable characters, tokenize the document with word stems, and only then calculate similarity scores while applying correction factors based on document and word frequency.
+
+** Pre-requisites
+
+- Emacs 27.1+
+- Python 3.6+
+- Git 2.23+ (for manual installation)
+
+
 ** Installation
+
+You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, or =develop= for a version with the latest additions. Just replace the branch name with *main* or *develop* wherever it appears in the snippets below.
+
+*Using straight.el*
+
+Add the following to your =init.el=:
+
+#+begin_src elisp
+(straight-use-package '(org-similarity :type git :host github :repo
+ "brunoarine/org-similarity" :branch "main" :files ("*.el" "*.txt"
+ "orgsimilarity")))
+#+end_src
+
+*Doom Emacs*
+
+Add the following to =packages.el=:
+
+#+begin_src elisp
+(package! org-similarity :recipe (:host github :repo "brunoarine/org-similarity"
+   :branch "main" :files ("*.el" "*.txt" "orgsimilarity")))
+#+end_src
+
+*Manual installation*
 
 Clone the repository:
 
 #+begin_src sh
-git clone https://github.com/brunoarine/org-similarity
+git clone -b main https://github.com/brunoarine/org-similarity
 #+end_src
 
-Then load the package by adding it to your =load-path= in your =init.el=:
+Then add the package to your =load-path= in your =init.el=:
 #+begin_src elisp
 (add-to-list 'load-path "/path/to/org-similarity")
+#+end_src
+
+** Loading the package
+
+Load the package using the =require= function in your =init.el=:
+
+#+begin_src elisp
 (require 'org-similarity)
 #+end_src
 
-Or, with =use-package=:
+Or using =use-package=:
 
 #+begin_src elisp
 (use-package org-similarity
   :load-path  "path/to/org-similarity")
 #+end_src
+
+** Usage
+
+Upon running the commands below for the first time, =org-similarity=
+will ask you to install the necessary Python dependencies (if they are not found in the configured environment---see [[#configuration][Configuration]] for more info). By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
+
+| Command                          | Description                                                                           |
+|----------------------------------+---------------------------------------------------------------------------------------|
+| =M-x org-similarity-insert-list= | Inserts a list of files that are similar to the current buffer at the end of it.      |
+| =M-x org-similarity-sidebuffer=  | Shows a list of files that are similar to the current buffer in a side buffer.        |
+| =M-x org-similarity-query=       | Lets the user input a query and shows a list of related documents in the side buffer. |
 
 ** Configuration
 
@@ -40,24 +107,90 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; Spanish and Swedish.
 (setq org-similarity-language "english")
 
+;; Algorithm to use when generating the scores list. The possible choices are
+;; `tfidf' or `bm25'. Default is `tfidf' and it generally works better in
+;; most cases. However, `bm25' may be a bit more robust in rare cases, depending
+;; on the size of your notes.
+(setq org-similarity-algorithm "tfidf")
+
 ;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
+
+;; Minimum document size (in number of words) to be included in the corpus.
+;; The number of words is related to the document body, and doesn't included
+;; the file properties (not even the title).
+;; Default is 0 (include all documents, even the empty ones).
+(setq org-similarity-min-words 0)
 
 ;; Whether to prepend the list entries with similarity scores.
 (setq org-similarity-show-scores nil)
 
 ;; Whether the resulting list of similar documents will point to ID property or
-;; filename. Default it nil.
+;; filename. Default is nil.
 ;; However, I recommend setting it to `t' if you use `org-roam' v2.
 (setq org-similarity-use-id-links nil)
 
 ;; Scan for files inside `org-similarity-directory' recursively.
 (setq org-similarity-recursive-search nil)
+
+;; Filepath to a custom Python interpreter (e.g. '/path/to/venv/bin/python'
+;; If the package's requirements aren't met, `org-similarity' will try to
+;; install or upgrade them automatically. If `nil', the package will create
+;; and use a virtual environment in the same directory where `org-similarity'
+;; is located (usually `~/.emacs.d/.local' if you installed via a package
+;; manager, or in the path where you cloned this repo and loaded the package
+;; manually).
+(setq org-similarity-custom-python-interpreter nil)
+
+;; Remove first result from the scores list. Useful if the current buffer is
+;; saved in the searched directory, and you don't want to see it included
+;; in the list. Default is nil."
+(setq org-similarity-remove-first nil)
+
+;; Text to show in the list heading. You can set it to "" if you
+;; wish to hide the heading altogether.
+(setq org-similarity-heading "** Related notes")
+
+;; String to prepend the list items. You can set it to "* " to turn each
+;; item into org headings, or "- " to turn them into an unordered org list.
+;; Set the variable to "" to hide prefixes.
+(setq org-similarity-prefix "- ")
 #+end_src
 
 
-** Usage
+** Benchmarking
 
-In a buffer with an open =org-mode= file, type =M-x org-similarity-insert-list RET=.
+You can test the textual similarity algorithm employed in =org-similarity= by testing it against the [[http://ixa2.si.ehu.eus/stswiki/index.php/STSbenchmark][STSbenchmark]] dataset. Create a directory named =./data/raw= and extract the files in the dataset into it.
 
-If this is the first time you run that command, it will ask you to install the necessary Python dependencies. By pressing =y= to continue, it will create a virtual environment under the hood and download the requirements automatically. Once finished, you can close the installation log buffer, and run the command again.
+After that, run:
+
+#+begin_src sh
+make eval
+#+end_src
+
+** Changelog
+
+*** 2023-06-29 - v1.0.0
+- Added BM25 as an alternative algorithm.
+- Added heading and prefix options.
+- Formatted the score as a floating point number with two decimal places.
+- Implemented a filter for minimum words.
+- Added the `org-similarity-remove-first` option.
+- Changed the default directory to ~/org.
+- Decoupled the interpreter and dependency checks from the main function.
+- Renamed predicate functions for clarity.
+- Refactored command, executable, and dependency checks.
+- Removed null entries from `junkchars` and `stopwords`.
+- Implemented a benchmarking routine.
+- Several bug fixes.
+
+*** 2022-12-26 - v0.2
+- Automated installation of Python dependencies (using virtual environments).
+- Better =org-roam= v2 compatibility.
+- =orgparse= to parse org-mode files.
+- =org-similarity-sidebuffer= command will show results in a side buffer.
+- Refactored and optimized Python code.
+
+*** 2020-12-05 - v0.1-alpha
+- Alpha release of the package.
+- Tested with =org-roam= v1.

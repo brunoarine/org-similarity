@@ -4,9 +4,11 @@
 ;;
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
-;; Version: 0.3
-;; Package-Requires: ((f "0.20.0") (emacs "26.1"))
-;; Keywords: python, scikit-learn, tf-idf, similarity, org
+
+;; Version: 1.0.0
+;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
+;; Keywords: matching, outlines, wp, org
+
 
 ;; 3-clause BSD License
 
@@ -40,13 +42,23 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "0.3"
+(defconst org-similarity-version "1.0.0"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
   "english"
   "The language passed to nltk's Snowball stemmer."
   :type 'string)
+
+(defcustom org-similarity-algorithm
+  "tfidf"
+  "Bag-of-words algorithm. Possible values: tfidf or bm25."
+  :type 'string)
+
+(defcustom org-similarity-min-words
+  0
+  "Minimum document size (in number of words) to be included in the corpus."
+  :type 'integer)
 
 (defcustom org-similarity-number-of-documents
   10
@@ -59,7 +71,7 @@
   :type 'boolean)
 
 (defcustom org-similarity-directory
-  ""
+  "~/org"
   "Directory to scan for possibly similar documents."
   :type 'string)
 
@@ -73,45 +85,64 @@
   "Whether to show results as ID links instead of FILE links."
   :type 'boolean)
 
-(defvar org-similarity-package-path
+(defcustom org-similarity-remove-first
+  nil
+  "Remove first result from the scores list.
+Useful if the source document is inside the same directory as the target
+documents, and you don't want to see it included in the list for obvious
+reasons.  Default is False."
+  :type 'boolean)
+
+(defcustom org-similarity-custom-python-interpreter
+  nil
+  "Override org-similarity default interpreter.
+If nul, org-similarity will use a venv inside `emacs-local-directory'."
+  :type 'string)
+
+(defcustom org-similarity-prefix
+  "- "
+  "Items prefix in the similarity list when inserted in the current buffer."
+  :type 'string)
+
+(defcustom org-similarity-heading
+  "** Related notes"
+  "Text to add before the inserted list."
+  :type 'string)
+
+(defvar org-similarity--package-path
   (file-name-directory
    (f-full (or load-file-name buffer-file-name)))
   "Org-similarity location.")
 
-;; Dependency installation variables and functions
-
-(defvar org-similarity-python-interpreter
-  (concat org-similarity-package-path "venv/bin/python")
-  "Path to the Python executable that you want to use.")
+(defun org-similarity--get-python-interpreter ()
+  "Return the path to the most appropriate Python interpreter."
+  (or org-similarity-custom-python-interpreter
+      (concat org-similarity--package-path "venv/bin/python")))
 
 (defvar org-similarity-deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
   "Name of the buffer used for installing org-similarity dependencies.")
 
-(defun org-similarity--is-python-available ()
-  "Return t if Python is available."
+(defun org-similarity--system-python-available-p ()
+  "Return t if Python is available in the system."
   (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
-(defun org-similarity--is-deps-available ()
-  "Return t if requirements.txt packages are installed, nil otherwise."
-  (if (file-exists-p org-similarity-python-interpreter)
-      (zerop (call-process org-similarity-python-interpreter nil nil nil
-                           (concat org-similarity-package-path "check_deps.py"))) nil))
+(defun org-similarity--python-interpreter-available-p ()
+  "Check if designated Python interpreter is available."
+  (file-exists-p (org-similarity--get-python-interpreter)))
 
-(defun org-similarity-install-dependencies ()
+(defun org-similarity--deps-available-p ()
+  "Return t if requirements.txt packages are installed, nil otherwise."
+  (if (file-exists-p (org-similarity--get-python-interpreter))
+      (zerop (call-process (org-similarity--get-python-interpreter) nil nil nil
+                           (concat org-similarity--package-path "orgsimilarity/check_deps.py"))) nil))
+
+(defun org-similarity-create-local-venv ()
   "Create environment and install Python dependencies and main script."
-  (when (org-similarity--is-python-available)
-    (let* ((install-commands
-            (concat
-             "cd " org-similarity-package-path " && \
-                python3 -m venv venv && \
-                source venv/bin/activate && \
-                python3 -m pip install --upgrade pip && \
-                python3 -m pip install -r requirements.txt && \
-                python3 -m pip install . && \
-                cd -"))
+  (when (org-similarity--system-python-available-p)
+    (let* ((install-commands (concat (executable-find "python3") " -m venv " org-similarity--package-path "venv"))
            (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
@@ -121,49 +152,106 @@
           (message "Installation of `org-similarity' Python dependencies succeeded")
         (error "Installation of `org-similarity' Python dependencies failed!")))))
 
+(defun org-similarity-install-dependencies ()
+  "Install Python dependencies inside the interpreter's environment."
+  (when (org-similarity--python-interpreter-available-p)
+    (let* ((install-commands (concat (org-similarity--get-python-interpreter)
+                                     " -m pip install --upgrade pip && "
+                                     (org-similarity--get-python-interpreter)
+                                     " -m pip install -r "
+                                     org-similarity--package-path
+                                     "requirements.txt"))
+           (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
+      (pop-to-buffer buffer)
+      (compilation-mode)
+      (if (zerop (let ((inhibit-read-only t))
+                   (call-process "sh" nil buffer t "-c" install-commands)))
+          (message "Installation of `org-similarity' Python dependencies succeeded")
+        (error "Installation of `org-similarity' Python dependencies failed!")))))
 
+(defun org-similarity--check-interpreter-and-deps-status ()
+  "Perform interpreter and dependencies check, and install stuff if needed."
+  (progn
+    (unless (org-similarity--python-interpreter-available-p)
+      (org-similarity-create-local-venv))
+    (unless (org-similarity--deps-available-p)
+      (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
+          (org-similarity-install-dependencies)
+        (error "Org-similarity won't work until its Python dependencies are downloaded!")))))
 
+(defun org-similarity--run-command (filename)
+  "Run Python routine on FILENAME and return the COMMAND output as string."
+  (progn
+    (org-similarity--check-interpreter-and-deps-status)
+    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s -p '%s' --heading '%s' %s %s %s %s"
+                           (org-similarity--get-python-interpreter)
+                           org-similarity--package-path
+                           filename
+                           org-similarity-directory
+                           org-similarity-language
+                           org-similarity-number-of-documents
+                           org-similarity-algorithm
+                           org-similarity-min-words
+                           org-similarity-prefix
+                           org-similarity-heading
+                           (if org-similarity-show-scores "--scores" "")
+                           (if org-similarity-recursive-search "--recursive" "")
+                           (if org-similarity-remove-first "--remove-first" "")
+                           (if org-similarity-use-id-links "--id-links" ""))))
+      (shell-command-to-string command))))
 
-;; Main routine.
+(defun org-similarity--save-buffer-to-temp ()
+  "Write buffer to a temp file and return the path to that file."
+  (let ((tmpfile (make-temp-file "simil"))
+        (inhibit-message t)     ;Don't show the messages in Echo area
+        (message-log-max nil))  ;Don't show the messages in the *Messages* buffer
+    (write-region (point-min) (point-max) tmpfile)
+    (identity tmpfile)))
 
-(defun org-similarity-insert-list ()
-  "Insert a list of 'org-mode' links to files that are similar to the buffer file."
-  (interactive)
-  ;; If org-similarity dependencies are not installed yet, install them
-  (unless (org-similarity--is-deps-available)
-    (if (y-or-n-p "Org-similarity needs to download some Python packages to work. Download them now? ")
-        (org-similarity-install-dependencies)
-      (error "Org-similarity won't work until its Python dependencies are downloaded!")))
-  (goto-char (point-max))
-  (newline)
-  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
-                         org-similarity-python-interpreter
-                         buffer-file-name
-                         org-similarity-directory
-                         org-similarity-language
-                         org-similarity-number-of-documents
-                         (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive" "")
-                         (if org-similarity-use-id-links "--id-links" ""))))
-    (insert (shell-command-to-string command))))
+(defun org-similarity--save-query-to-temp ()
+  "Write buffer to a temp file and return the path to that file."
+  (let ((tmpfile (make-temp-file "simil"))
+        (inhibit-message t)     ;Don't show the messages in Echo area
+        (message-log-max nil)) ;Don't show the messages in the *Messages* buffer
+    (f-write-text (read-string "org-similarity query: ") 'utf-8 tmpfile)
+    (identity tmpfile)))
+
+(defun org-similarity--show-sidebuffer (filename)
+  "Search similar documents related to FILENAME and puts results in a side buffer."
+  (add-to-list 'display-buffer-alist
+               '("*Similarity Results*"
+                 (display-buffer-in-side-window)
+                 (inhibit-same-window . t)
+                 (side . right)
+                 (window-width . 0.33)))
+  (let* ((org-similarity-heading "Similarity results")
+         (org-similarity-prefix "")
+         (results (org-similarity--run-command filename)))
+    (with-output-to-temp-buffer "*Similarity Results*"
+      (princ results))
+    (with-current-buffer "*Similarity Results*"
+      (org-mode))))
 
 (defun org-similarity-sidebuffer ()
-  "Puts the results of org-similarity in a side-window."
+  "Show a list of documents similar to the current buffer in a side buffer."
   (interactive)
-  (let ((command (format "%s -m orgsimilarity -i %s -d %s -l %s -n %s %s %s %s"
-                         org-similarity-python-interpreter
-                         buffer-file-name
-                         org-similarity-directory
-                         org-similarity-language
-                         org-similarity-number-of-documents
-                         (if org-similarity-show-scores "--scores" "")
-                         (if org-similarity-recursive-search "--recursive" "")
-                         (if org-similarity-use-id-links "--id-links" ""))))
-    (setq similarity-results (shell-command-to-string command)))
-  (with-output-to-temp-buffer "*Similarity Results*"
-    (princ similarity-results))
-  (with-current-buffer "*Similarity Results*"
-    (org-mode)))
+  (let ((filename (org-similarity--save-buffer-to-temp)))
+    (org-similarity--show-sidebuffer filename)))
+
+(defun org-similarity-insert-list ()
+  "Create a list of documents similar to the current buffer at the end of it."
+  (interactive)
+  (let ((filename (org-similarity--save-buffer-to-temp)))
+    (goto-char (point-max))
+    (newline)
+    (insert (org-similarity--run-command filename))))
+
+(defun org-similarity-query ()
+  "Show documents similar to a query in the side buffer."
+  (interactive)
+  (let ((filename (org-similarity--save-query-to-temp))
+        (org-similarity-remove-first nil))
+    (org-similarity--show-sidebuffer filename)))
 
 (provide 'org-similarity)
 

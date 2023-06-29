@@ -1,13 +1,17 @@
+from rank_bm25 import BM25Okapi
 import argparse
+import functools
 import os
 import re
 import sys
+from itertools import compress
 from pathlib import Path
-import numpy as np
-import functools
-import orgparse
+from typing import Callable, List
 
-from nltk.stem import SnowballStemmer, api
+import numpy as np
+import orgparse
+from nltk.stem import SnowballStemmer, WordNetLemmatizer
+from scipy import sparse
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -16,7 +20,171 @@ JUNKCHARS_FILENAME = "junkchars.txt"
 FILES_EXT = "*.org"
 SCRIPT_PATH = Path(__file__).parent
 
-# Fetches filenames in the same directory of the script
+WORD_RE = re.compile(r"(?u)\b[a-z]{2,}\b")
+ORG_FILE_PROPERTY_RE = re.compile(r"#\+\w+:")
+ORG_FILE_PROPERTY_LINE_RE = re.compile(r"(?m)^#\+.*\n?")
+ORG_TAGS_RE = re.compile(r":[\w:]*:")
+URL_RE = re.compile(r"\S*https?:\S*")
+
+
+class Processor:
+    """Class containing preprocessing and tokenization rules.
+
+    Args:
+        junkchars (list): List of junk characters to be stripped from the text.
+        stopwords (list): List of stopwords to be removed from the text.
+        stemmer (nltk's stemmer): Stemmer provided by the nltk API.
+        lemmatize (bool): Whether to lemmatize tokens.
+    """
+
+    def __init__(
+        self,
+        junkchars: List[str],
+        stopwords: List[str],
+        stemmer: Callable,
+        lemmatize=False,
+    ):
+        self.junkchars = junkchars
+        self.stopwords = stopwords
+        self.stemmer = stemmer
+        self.lemmatize = lemmatize
+        self._lemmatizer = WordNetLemmatizer() if self.lemmatize else None
+        self._stopwords_re = re.compile(
+            r"\b(" + r"|".join(stopwords) + r")\b\s*"
+        )
+
+    def preprocessor(self, text: str) -> str:
+        """Remove fancy symbols and stopwords."""
+        text = text.lower()
+        text = text.translate({ord("’"): ord("'")})
+        text = ORG_FILE_PROPERTY_RE.sub("", text)
+        text = ORG_TAGS_RE.sub("", text)
+        text = self._stopwords_re.sub("", text)
+        text = URL_RE.sub("", text)
+        return text
+
+    def _tokenize(self, text: str) -> List[str]:
+        """Preprocess a text and returns a list of tokens."""
+        words = WORD_RE.findall(text)
+        return words
+
+    def _lemmatize(self, tokens: List[str]) -> List[str]:
+        return [self._lemmatizer.lemmatize(w) for w in tokens]
+
+    def _stemmize(self, tokens: List[str]) -> List[str]:
+        """Get only the stems from a list of words."""
+        return [self.stemmer(w) for w in tokens]
+
+    def tokenizer(self, text: str) -> List[str]:
+        """Run the preprocessor."""
+
+        tokens = self._tokenize(text)
+        tokens = self._lemmatize(tokens) if self.lemmatize else tokens
+        tokens = self._stemmize(tokens)
+        return tokens
+
+
+class Tfidf:
+    """Scikit-learn's TF-IDF wrapper.
+
+    Args:
+        processor (Processor): Processor object.
+        b (float): Free parameter. Default is 0.75.
+        k1 (float): Free parameter. Recommended value is between 1.2 and 2.0.
+        normalize (bool): Divide the results by the maximum value so it sits
+            in the range between 0 and 1.
+    """
+
+    def __init__(self, processor, **kwargs):
+        self.processor = processor
+
+        self._vectorizer = TfidfVectorizer(
+            tokenizer=self.processor.tokenizer,
+            preprocessor=self.processor.preprocessor,
+            token_pattern=None,
+            **kwargs,
+        )
+
+    def fit(self, documents: List[str]):
+        self._vectorizer.fit(documents)
+        self.documents_embeddings_ = self._vectorizer.transform(documents)
+
+    def get_scores(self, source: str):
+        self.source_embeddings_ = self._vectorizer.transform([source])
+        scores = cosine_similarity(
+            self.source_embeddings_, self.documents_embeddings_
+        ).flatten()
+        return scores
+
+
+class BM25:
+    """Okapi BM25 wrapper.
+
+    Args:
+        processor (Processor): Processor object.
+    """
+
+    def __init__(self, processor):
+        self.processor = processor
+
+    def fit(self, documents: List[str]):
+        """Fit IDF to documents X"""
+        clean_docs = [self.processor.preprocessor(d) for d in documents]
+        tokenized_docs = [self.processor.tokenizer(d) for d in clean_docs]
+        self._model = BM25Okapi(tokenized_docs)
+
+    def get_scores(self, source: str):
+        clean_source = self.processor.preprocessor(source)
+        tokenized_source = self.processor.tokenizer(clean_source)
+        scores = self._model.get_scores(tokenized_source)
+        return scores
+
+
+class Corpus:
+    """This wrapper provides easy access to a filtered corpus.
+
+    Args:
+        paths (list of Path): Documents paths.
+        min_words (int): Minimum document size (in number of words) to include
+            in the corpus. This number takes into account the number of words
+            in the document bodies only, and doesn't include any kind of file
+            properties (not even #+TITLE).
+
+    Properties:
+        documents_ (list of str): List of (un)filtered documents contents.
+        paths_ (list of Path): List of (un)filtered document paths.
+
+    """
+
+    def __init__(
+        self,
+        paths: List[Path],
+        min_words: int = 0,
+    ):
+        self.min_words = min_words
+
+        self.documents_ = [read_org_file(p) for p in paths]
+        self.paths_ = paths
+        if min_words:
+            self._apply_filter()
+
+    def _apply_filter(self):
+        """Apply min words filter in both documents and documents paths"""
+        stripped_docs = [
+            ORG_FILE_PROPERTY_LINE_RE.sub("", d) for d in self.documents_
+        ]
+        raw_tokens = [WORD_RE.findall(d) for d in stripped_docs]
+        tokens_count = np.array([len(t) for t in raw_tokens])
+        mask = (tokens_count > self.min_words).tolist()
+        self.documents_ = list(compress(self.documents_, mask))
+        self.paths_ = list(compress(self.paths_, mask))
+
+
+def read_org_file(filename: Path):
+    document = orgparse.load(filename).get_body(format="plain")
+    return document
+
+
 def get_stopwords() -> list:
     """Get a list of stopwords from STOPWORDS file."""
     with open(SCRIPT_PATH / STOPWORDS_FILENAME, "r") as f:
@@ -31,6 +199,81 @@ def get_junkchars() -> list:
         # remove empty element, which will probably exist in the file
         junkchars = [char for char in junkchars if char]
     return junkchars
+
+
+def get_relative_path(source: Path, target: Path) -> Path:
+    """Get the relative path to target from a source.
+
+    Args:
+        source (Path): path to the reference filename.
+        target (Path): path to the target.
+
+    Returns:
+        A Path object in relative path format.
+    """
+    return Path(os.path.relpath(target, source.parent))
+
+
+def format_results(
+    input_path: Path,
+    targets: List[Path],
+    scores: List[float],
+    num_results: int,
+    id_links: bool,
+    show_scores: bool,
+    remove_first: bool,
+    prefix: str = "",
+    heading: str = "",
+) -> List[str]:
+    """Format results in an org-compatible format with links.
+
+    Args:
+        input_filename (Path): path to the filename that will be used as
+            reference.
+        target_filenames (Path): Glob containing the path to the documents
+            whose similarity with the input filename will be estimated.
+        scores (array-like): List of similarity scores with the same number of
+            documents in target_filenames plus one (accounting for the
+            input_filename).
+        num_results (int): How many similar entries to list at the end of the buffer.
+        id_links (bool): Whether the resulting list of similar documents will
+            point to ID property or filename. Recommend setting it to True
+            if you use `org-roam' v2.
+        show_scores (bool): Whether to prepend the results with the similarity score.
+        remove_first (bool): Remove first result from the scores list. Useful if
+            the source document is inside the same directory as the target documents,
+            and you don't want to see it included in the list for obvious reasons.
+            Default is False.
+        prefix (str): Prefix to add to each item in the printed list.
+        heading (str): List heading (title).
+
+    Returns:
+        List of org formatted links to the most similar documents, sorted in descending
+        order of similarity.
+    """
+    remove_first = int(remove_first)
+    results = zip(scores, targets)
+    sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
+    valid_results = sorted_results[remove_first : num_results + remove_first]
+    formatted_results = []
+    print(heading)
+    print()
+    for score, target in valid_results:
+        org_content = orgparse.load(target)
+        title = org_content.get_file_property("title")
+        score_output = f"{score:.2f} " if show_scores else ""
+        if id_links:
+            target_id = org_content.get_property("ID")
+            link_ref = f"id:{target_id}"
+        else:
+            # org-mode links use relative rather than absolute paths
+            target_rel_path = get_relative_path(
+                source=input_path, target=target
+            )
+            link_ref = f"file:{target_rel_path}"
+        entry = f"{prefix}{score_output}[[{link_ref}][{title}]]"
+        formatted_results.append(entry)
+    return formatted_results
 
 
 def parse_args():
@@ -51,6 +294,13 @@ def parse_args():
         required=True,
     )
     p.add_argument(
+        "--algorithm",
+        "-a",
+        type=str,
+        help="algorithm for creating the embeddings",
+        required=True,
+    )
+    p.add_argument(
         "--number",
         "-n",
         type=int,
@@ -64,6 +314,29 @@ def parse_args():
         type=str,
         default="english",
         help="nltk's SnowballStemmer language (default: english)",
+        required=False,
+    )
+    p.add_argument(
+        "--min-words",
+        "-m",
+        type=int,
+        default=0,
+        help="minimum document size (in number of words) to be included in the corpus",
+        required=False,
+    )
+    p.add_argument(
+        "--prefix",
+        "-p",
+        type=str,
+        default="",
+        help="item prefix",
+        required=False,
+    )
+    p.add_argument(
+        "--heading",
+        type=str,
+        default="",
+        help="list heading",
         required=False,
     )
     p.add_argument(
@@ -87,148 +360,14 @@ def parse_args():
         help="create ID links instead of FILE links (default: False)",
         required=False,
     )
-    return p.parse_args()
-
-
-def get_tokens(
-    text: str, stemmer: api.StemmerI, junkchars: list, stopwords: list
-) -> list:
-    """
-    Preprocess a text and returns a list of tokens.
-
-    Args:
-        text (str): Text whose tokens will be extracted from.
-        stemmer (nltk's stemmer): Stemmer provided by the nltk API.
-        junkchars (list): List of junk characters to be stripped from the text.
-        stopwords (list): List of stopwords to be removed from the text.
-
-    Returns:
-        List of tokens after the text has been pre-processed.
-
-    """
-    text = text.lower()
-    # Replaces the stupid apostrophe with a normal one.
-    # This step is needed because there's an Emacs package for posh people
-    # that transforms every punctuation into fancy unicode symbols, and
-    # this screws with the stopwords filter some lines below.
-    text = text.replace("’", "'")
-    # Remove org-mode front matter and other special characters
-    # that could leak into the tokens list.
-    for junkchar in junkchars:
-        text = text.replace(junkchar, "")
-    # Replace carriage returns with a space.
-    text = text.replace("\n", " ")
-    tokens = text.split(" ")
-    # Strip stopwords.
-    tokens = [w for w in tokens if w not in stopwords]
-    # Replace tokens with their stems.
-    # I tried using a lemmatizer like nltk's WordNet and spacy, but they
-    # didn't cause much difference in the final results that could justify
-    # a threefold increase in processing time.
-    tokens = [stemmer(w) for w in tokens]
-    return tokens
-
-
-def get_scores(
-    input_filename: Path, target_filenames: Path, stemmer: api.StemmerI
-):
-    """Create a document similarity table based on TF-IDF and cosine dist.
-
-    This function scans the a directory for org files and creates a sparse
-    matrix with all found tokens via tf-idf algorithm (short for term
-    frequency-inverse document frequency), which penalizes words that appear too
-    often in a text.
-
-    Args:
-        input_filename (Path): path to the filename that will be used as
-            reference.
-        target_filenames (Path): Glob containing the path to the documents
-            whose similarity with the input filename will be estimated.
-        stemmer (nltk stemmer): Instance of an nltk stemmer provided by the
-            nltk API.
-        
-    Returns:
-        List of similarity scores with the same number of documents in
-        target_filenames plus one (accounting for the input_filename).
-    """
-    stopwords = get_stopwords()
-    junkchars = get_junkchars()
-    base_document = orgparse.load(input_filename).get_body(format="plain")
-    documents = [
-        orgparse.load(f).get_body(format="plain") for f in target_filenames
-    ]
-    # To make uniformed vectors, both documents need to be combined first.
-    documents.insert(0, base_document)
-
-    tokenizer = functools.partial(
-        get_tokens, stemmer=stemmer, junkchars=junkchars, stopwords=stopwords
+    p.add_argument(
+        "--remove-first",
+        "-f",
+        action="store_true",
+        help="remove first row from results (default: False)",
+        required=False,
     )
-    vectorizer = TfidfVectorizer(tokenizer=tokenizer, token_pattern=None)
-    embeddings = vectorizer.fit_transform(documents)
-    scores = cosine_similarity(embeddings[0], embeddings[1:]).flatten()
-
-    return scores
-
-
-def get_relative_path(source: Path, target: Path) -> Path:
-    """Get the relative path to target from a source.
-
-    Args:
-        source (Path): path to the reference filename.
-        target (Path): path to the target.
-    
-    Returns:
-        A Path object in relative path format.
-    """
-    return Path(os.path.relpath(target, source.parent))
-
-
-def format_results(
-    input_path: Path,
-    targets: Path,
-    scores: np.ndarray,
-    num_results: int,
-    id_links: bool,
-    show_scores: bool,
-) -> list:
-    """Format results in an org-compatible format with links.
-    
-    Args:
-        input_filename (Path): path to the filename that will be used as
-            reference.
-        target_filenames (Path): Glob containing the path to the documents
-            whose similarity with the input filename will be estimated.
-        scores (array-like): List of similarity scores with the same number of
-            documents in target_filenames plus one (accounting for the
-            input_filename).
-        num_results (int): How many similar entries to list at the end of the buffer.
-        id_links (bool): Whether the resulting list of similar documents will
-            point to ID property or filename. Recommend setting it to True
-            if you use `org-roam' v2.
-        show_scores (bool): Whether to prepend the results with the similarity score.
-    
-    Returns:
-        List of org formatted links to the most similar documents, sorted in descending
-        order of similarity.
-    """
-    results = zip(scores, targets)
-    sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
-    valid_results = sorted_results[:num_results]
-    formatted_results = []
-    for score, target in valid_results:
-        org_content = orgparse.load(target)
-        title = org_content.get_file_property("title")
-        score_output = f"{score:.3f} " if show_scores else ""
-        if id_links:
-            target_id = org_content.get_property("ID")
-            link_ref = f"id:{target_id}"
-        else:
-            # org-mode links use relative rather than absolute paths
-            target_rel_path = get_relative_path(source=input_path, target=target)
-            link_ref = f"file:{target_rel_path}"
-        entry = f"{score_output}[[{link_ref}][{title}]]"
-        formatted_results.append(entry)
-    return formatted_results
+    return p.parse_args()
 
 
 def main():
@@ -241,28 +380,50 @@ def main():
     show_scores = args.scores
     recursive = args.recursive
     id_links = args.id_links
+    remove_first = args.remove_first
+    min_words = args.min_words
+    prefix = args.prefix
+    heading = args.heading
 
-    stemmer = SnowballStemmer(language).stem
-    target_glob = (
+    documents_glob = (
         directory.rglob(FILES_EXT) if recursive else directory.glob(FILES_EXT)
     )
-    target_filenames = [f for f in target_glob]
+    documents_paths = [f for f in documents_glob]
+    corpus = Corpus(paths=documents_paths, min_words=min_words)
+    source_content = read_org_file(input_path)
 
-    scores = get_scores(
-        input_filename=input_path,
-        target_filenames=target_filenames,
+    stemmer = SnowballStemmer(language).stem
+    junkchars = get_junkchars()
+    stopwords = get_stopwords()
+    processor = Processor(
+        junkchars=junkchars,
+        stopwords=stopwords,
         stemmer=stemmer,
+        lemmatize=False,
     )
-    results = format_results(
+
+    if args.algorithm == "bm25":
+        model = BM25(processor=processor)
+    else:
+        model = Tfidf(processor=processor)
+
+    # Add source content to list of possible words to avoid zero divisions.
+    model.fit(corpus.documents_ + [source_content])
+    scores = model.get_scores(source=source_content)
+
+    formatted_results = format_results(
         input_path=input_path,
-        targets=target_filenames,
+        targets=corpus.paths_,
         scores=scores,
         num_results=num_results,
         show_scores=show_scores,
         id_links=id_links,
+        remove_first=remove_first,
+        prefix=prefix,
+        heading=heading,
     )
 
-    for entry in results:
+    for entry in formatted_results:
         print(entry)
 
 
