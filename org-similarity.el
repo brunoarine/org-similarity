@@ -5,7 +5,7 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 ;; Version: 0.2
-;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: matching, outlines, wp, org
 
 ;; 3-clause BSD License
@@ -32,6 +32,8 @@
 ;;; Code:
 
 (require 'f)
+(require 'json)
+
 
 (defgroup org-similarity nil
   "Org-similarity."
@@ -145,8 +147,6 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   (if (file-exists-p (org-similarity--get-python-interpreter))
       (zerop (call-process (org-similarity--get-python-interpreter) nil nil nil "-m" "findlike" "--version")) nil))
 
-(org-similarity--get-python-interpreter)
-
 (defun org-similarity-create-local-venv ()
   "Create environment and install Python dependencies."
   (when (org-similarity--system-python-available-p)
@@ -186,11 +186,19 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
           (org-similarity-install-dependencies)
         (error "Org-similarity won't work until its Python dependencies are downloaded!")))))
 
+(defun org-similarity--parse-json-string (json-string)
+  "Parse JSON-STRING into a list of (score . target) pairs."
+  (let ((json-array (json-read-from-string json-string)))
+    (mapcar (lambda (item)
+              (cons (cdr (assoc 'score item))
+                    (cdr (assoc 'target item))))
+            json-array)))
+
 (defun org-similarity--run-command (filename)
   "Run Python routine on FILENAME and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s -m findlike %s -d %s -l %s -m %s -a %s -c %s -p '%s' -H '%s' %s %s %s"
+    (let ((command (format "%s -m findlike %s -d %s -l %s -m %s -a %s -c %s %s %s %s -F json"
                            (org-similarity--get-python-interpreter)
                            filename
                            org-similarity-directory
@@ -198,12 +206,58 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-number-of-documents
                            org-similarity-algorithm
                            org-similarity-min-words
-                           org-similarity-prefix
-                           org-similarity-heading
                            (if org-similarity-show-scores "-s" "")
                            (if org-similarity-recursive-search "-R" "")
                            (if org-similarity-remove-first "-h" ""))))
       (shell-command-to-string command))))
+
+(defun org-similarity--format-pairs (pairs)
+  "Format PAIRS extracted from a JSON string."
+  (let ((formatted-pairs
+         (mapconcat
+          (lambda (pair)
+            (format "%s%s %s"
+                    org-similarity-prefix
+                    (if org-similarity-show-scores (format " %.2f" (car pair)) "")
+                    (org-similarity--create-link (cdr pair) org-similarity-use-id-links)))
+          pairs "\n")))
+    (format "%s\n%s" org-similarity-heading formatted-pairs)))
+
+(defun org-similarity--get-org-title (filename)
+  "Get the #+TITLE of the org file FILENAME."
+  (if (and (file-exists-p filename)
+           (string= (file-name-extension filename) "org"))
+      (with-current-buffer (find-file-noselect filename)
+        (save-excursion
+          (goto-char (point-min))
+          (if (re-search-forward "^#\\+TITLE: \\(.*\\)$" nil t)
+              (match-string 1)
+            filename)))
+    "< invalid filename >"))
+
+(defun org-similarity--get-org-id (filename)
+  "Get the :ID: property from the org file FILENAME. Return nil if not found."
+  (if (and (file-exists-p filename)
+           (string= (file-name-extension filename) "org"))
+      (with-current-buffer (find-file-noselect filename)
+        (save-excursion
+          (goto-char (point-min))
+          (if (re-search-forward ":ID: \\(.*\\)$" nil t)
+              (match-string 1)
+            nil)))
+    "< invalid filename >"))
+
+(defun org-similarity--create-link (filename use-id)
+  "Create an Org mode link to FILENAME.
+Use ID property instead of file path if USE-ID is non-nil."
+  (if (and (file-exists-p filename)
+           (string= (file-name-extension filename) "org"))
+      (let ((title (org-similarity--get-org-title filename))
+            (id (org-similarity--get-org-id filename)))
+        (if (and use-id id)
+            (format "[[id:%s][%s]]" id title)
+          (format "[[%s][%s]]" filename title)))
+    filename))
 
 (defun org-similarity--save-buffer-to-temp ()
   "Write buffer to a temp file and return the path to that file."
@@ -231,9 +285,10 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                  (window-width . 0.33)))
   (let* ((org-similarity-heading "Similarity results")
          (org-similarity-prefix "")
-         (results (org-similarity--run-command filename)))
+         (results (org-similarity--run-command filename))
+         (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
     (with-output-to-temp-buffer "*Similarity Results*"
-      (princ results))
+      (princ formatted-results))
     (with-current-buffer "*Similarity Results*"
       (org-mode))))
 
@@ -246,10 +301,12 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 (defun org-similarity-insert-list ()
   "Create a list of documents similar to the current buffer at the end of it."
   (interactive)
-  (let ((filename (org-similarity--save-buffer-to-temp)))
+  (let* ((filename (org-similarity--save-buffer-to-temp))
+        (results (org-similarity--run-command filename))
+        (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
     (goto-char (point-max))
     (newline)
-    (insert (org-similarity--run-command filename))))
+    (insert formatted-results)))
 
 (defun org-similarity-query ()
   "Show documents similar to a query in the side buffer."
