@@ -44,7 +44,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "1.0.0"
+(defconst org-similarity-version "2.0.0"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
@@ -299,7 +299,7 @@ Use ID property instead of file path if USE-ID is non-nil."
                  (inhibit-same-window . t)
                  (side . right)
                  (window-width . 0.33)))
-  (let* ((org-similarity-heading "Similarity results")
+  (let* ((org-similarity-heading "Similarity results\n")
          (org-similarity-prefix "")
          (results (org-similarity--run-command filename))
          (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
