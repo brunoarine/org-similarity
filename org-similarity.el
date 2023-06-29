@@ -55,10 +55,16 @@
   "Bag-of-words algorithm. Possible values: tfidf or bm25."
   :type 'string)
 
-(defcustom org-similarity-min-words
+(defcustom org-similarity-min-chars
   0
-  "Minimum document size (in number of words) to be included in the corpus."
-  :type 'integer)
+  "Minimum document size (in number of characters) to be included in the corpus.
+This variable replaces the obsolete `org-similarity-min-words' var since version
+1.0, where `org-similarity' began to use `findlike' as backend. As a suggestion,
+multiply the minimum number of words by 5 (the average length of words in the
+English language) to get an approximate minum number of characters."
+:type 'integer)
+
+(make-obsolete-variable 'org-similarity-min-words 'org-similarity-min-chars "1.0")
 
 (defcustom org-similarity-number-of-documents
   10
@@ -79,6 +85,11 @@
   "*.org"
   "Filename extension to search for similar texts."
   :type 'string)
+
+(defcustom org-similarity-threshold
+  0.05
+  "Similarity score threshold."
+  :type 'float)
 
 (defcustom org-similarity-show-scores
   nil
@@ -198,17 +209,20 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run Python routine on FILENAME and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s -m findlike %s -d %s -l %s -m %s -a %s -c %s %s %s %s -F json"
+    (let ((command (format "%s -m findlike %s -d %s -l %s -m %s -a %s -c %s %s %s %s -F json -t %s"
                            (org-similarity--get-python-interpreter)
                            filename
                            org-similarity-directory
                            org-similarity-language
                            org-similarity-number-of-documents
                            org-similarity-algorithm
-                           org-similarity-min-words
+                           (if (boundp 'org-similarity-min-words)
+                             (* org-similarity-min-words 5)
+                             org-similarity-min-chars)
                            (if org-similarity-show-scores "-s" "")
                            (if org-similarity-recursive-search "-R" "")
-                           (if org-similarity-remove-first "-h" ""))))
+                           (if org-similarity-remove-first "-h" "")
+                           org-similarity-threshold)))
       (shell-command-to-string command))))
 
 (defun org-similarity--format-pairs (pairs)
