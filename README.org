@@ -32,7 +32,7 @@ That's why I've written =org-similarity=. As an avid =org-roam= user with more t
 
 ** Installation
 
-You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, or =develop= for a version with the latest additions. Just replace the branch name with *main* or *develop* wherever it appears in the snippets below.
+You can install =org-similarity= using =straing.el=, its Doom Emacs wrapper, or manually cloning the repository. In either case, you can choose to use the =main= branch for a stable version of the repository, =develop= for the latest additions, or ={RELEASE_VERSION} for a specific release version (e.g. =v1.0.0=). Just replace the =branch= property accordingly in the instructions below.
 
 *Using straight.el*
 
