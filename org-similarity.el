@@ -5,8 +5,8 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 
-;; Version: 1.0.0
-;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
+;; Version: 2.0.0
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: matching, outlines, wp, org
 
 
@@ -66,7 +66,7 @@ multiply the minimum number of words by 5 (the average length of words in the
 English language) to get an approximate minum number of characters."
 :type 'integer)
 
-(make-obsolete-variable 'org-similarity-min-words 'org-similarity-min-chars "1.0")
+(make-obsolete-variable 'org-similarity-min-words 'org-similarity-min-chars "1.0.0")
 
 (defcustom org-similarity-number-of-documents
   10
