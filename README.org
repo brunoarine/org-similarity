@@ -22,7 +22,7 @@ A good note-taking system should help you connect your ideas. But what if you ha
 
 That's why I've written =org-similarity=. As an avid =org-roam= user with more than a thousand notes, I can't count on my brain to recall them all.
 
-=org-similarity= makes it easier to retrieve those long forgotten files that are possibly buried in everyone's piles of notes. It's different from a simple keyword search, since it uses Python modules like [[https://github.com/nltk/nltk][nltk]] and [[https://github.com/scikit-learn/scikit-learn][scikit-learn]] for text preprocessing and semantic features extraction. More specifically, =org-similarity= remove stopwords and undesirable characters, tokenize the document with word stems, and only then calculate similarity scores while applying correction factors based on document and word frequency.
+=org-similarity= makes it easier to retrieve those long forgotten files that are possibly buried in everyone's piles of notes. It's different from a simple keyword search. This package is levered by [[https://github.com/brunoarine/findlike]], which looks at the words and phrases used in your reference document or a specific question you have, and then finds other files that use similar language. It’s a bit like doing a Google search across your own files.
 
 ** Pre-requisites
 
