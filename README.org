@@ -42,8 +42,7 @@ Add the following to your =init.el=:
 
 #+begin_src elisp
 (straight-use-package '(org-similarity :type git :host github :repo
- "brunoarine/org-similarity" :branch "main" :files ("*.el" "*.txt"
- "orgsimilarity")))
+ "brunoarine/org-similarity" :branch "main"))
 #+end_src
 
 *Doom Emacs*
@@ -52,7 +51,7 @@ Add the following to =packages.el=:
 
 #+begin_src elisp
 (package! org-similarity :recipe (:host github :repo "brunoarine/org-similarity"
-   :branch "main" :files ("*.el" "*.txt" "orgsimilarity")))
+   :branch "main"))
 #+end_src
 
 *Manual installation*

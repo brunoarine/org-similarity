@@ -5,7 +5,7 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 
-;; Version: 2.0.0
+;; Version: 2.1.0
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: matching, outlines, wp, org
 
@@ -44,7 +44,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "2.0.0"
+(defconst org-similarity-version "2.1.0"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
@@ -135,7 +135,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 (defun org-similarity--get-python-interpreter ()
   "Return the path to the most appropriate Python interpreter."
   (or org-similarity-custom-python-interpreter
-      (concat org-similarity--package-path "venv/bin/python")))
+      (concat org-similarity--package-path "venv/bin/python3")))
 
 (defvar org-similarity--deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
@@ -147,7 +147,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 
 (defun org-similarity--system-python-available-p ()
   "Return t if Python is available in the system."
-  (unless (executable-find "python")
+  (unless (executable-find "python3")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
@@ -163,7 +163,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
 (defun org-similarity-create-local-venv ()
   "Create environment and install Python dependencies."
   (when (org-similarity--system-python-available-p)
-    (let* ((install-commands (concat (executable-find "python") " -m venv " org-similarity--package-path "venv"))
+    (let* ((install-commands (concat (executable-find "python3") " -m venv " org-similarity--package-path "venv"))
            (buffer (get-buffer-create org-similarity--deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
