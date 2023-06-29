@@ -1,5 +1,7 @@
 #+TITLE: org-similarity
 
+#+HTML: <a href="https://github.com/brunoarine/org-similarity/releases"><img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/brunoarine/org-similarity"></a> <a href="https://github.com/brunoarine/org-similarity/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/brunoarine/org-similarity"></a><br>
+
 =org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users (re)discover similar documents in relation to the current buffer or to an input query using semantic textual similarity algorithms.
 
 #+ATTR_HTML: :style margin-left: auto; margin-right: auto;
@@ -101,8 +103,13 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; org-roam users might want to change it to `org-roam-directory'.
 (setq org-similarity-directory org-directory)
 
-;; The language passed to the Snowball stemmer in the `nltk' package.  The
-;; following languages are supported: Arabic, Danish, Dutch, English, Finnish,
+;; Filename extension to scan for similar text. By default, it will
+;; only scan Org-mode files, but you can change it to scan other
+;; kind of files as well.
+(setq org-similarity-file-extension-pattern "*.org")
+
+;; Changing this value will impact stopwords filtering and word stemmer.
+;; The following languages are supported: Arabic, Danish, Dutch, English, Finnish,
 ;; French, German, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian,
 ;; Spanish and Swedish.
 (setq org-similarity-language "english")
@@ -116,14 +123,18 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; How many similar entries to list at the end of the buffer.
 (setq org-similarity-number-of-documents 10)
 
-;; Minimum document size (in number of words) to be included in the corpus.
-;; The number of words is related to the document body, and doesn't included
-;; the file properties (not even the title).
-;; Default is 0 (include all documents, even the empty ones).
-(setq org-similarity-min-words 0)
+;; Minimum document size (in number of characters) to be included in the corpus.
+;; It includes every character, including the file properties drawer.
+;; Default is 0 (include all documents, even empty ones).
+(setq org-similarity-min-chars 0)
 
 ;; Whether to prepend the list entries with similarity scores.
 (setq org-similarity-show-scores nil)
+
+;; Similarity score threshold. All results with a similarity score below this
+;; value will be omitted from the final list.
+;; Default is 0.05.
+(setq org-similarity-threshold 0.05)
 
 ;; Whether the resulting list of similar documents will point to ID property or
 ;; filename. Default is nil.
@@ -156,41 +167,3 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; Set the variable to "" to hide prefixes.
 (setq org-similarity-prefix "- ")
 #+end_src
-
-
-** Benchmarking
-
-You can test the textual similarity algorithm employed in =org-similarity= by testing it against the [[http://ixa2.si.ehu.eus/stswiki/index.php/STSbenchmark][STSbenchmark]] dataset. Create a directory named =./data/raw= and extract the files in the dataset into it.
-
-After that, run:
-
-#+begin_src sh
-make eval
-#+end_src
-
-** Changelog
-
-*** 2023-06-29 - v1.0.0
-- Added BM25 as an alternative algorithm.
-- Added heading and prefix options.
-- Formatted the score as a floating point number with two decimal places.
-- Implemented a filter for minimum words.
-- Added the =org-similarity-remove-first= option.
-- Changed the default directory to ~/org.
-- Decoupled the interpreter and dependency checks from the main function.
-- Renamed predicate functions for clarity.
-- Refactored command, executable, and dependency checks.
-- Removed null entries from =junkchars= and =stopwords=.
-- Implemented a benchmarking routine.
-- Several bug fixes.
-
-*** 2022-12-26 - v0.2
-- Automated installation of Python dependencies (using virtual environments).
-- Better =org-roam= v2 compatibility.
-- =orgparse= to parse org-mode files.
-- =org-similarity-sidebuffer= command will show results in a side buffer.
-- Refactored and optimized Python code.
-
-*** 2020-12-05 - v0.1-alpha
-- Alpha release of the package.
-- Tested with =org-roam= v1.
