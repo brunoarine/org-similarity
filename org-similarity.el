@@ -4,9 +4,11 @@
 ;;
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
-;; Version: 0.2
-;; Package-Requires: ((emacs "26.1"))
+
+;; Version: 1.0.0
+;; Package-Requires: ((emacs "26.1") (f "0.20.0"))
 ;; Keywords: matching, outlines, wp, org
+
 
 ;; 3-clause BSD License
 
@@ -42,7 +44,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "1.0"
+(defconst org-similarity-version "1.0.0"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
