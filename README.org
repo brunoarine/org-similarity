@@ -1,6 +1,8 @@
 #+TITLE: org-similarity
 
-#+HTML: <a href="https://github.com/brunoarine/org-similarity/releases"><img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/brunoarine/org-similarity"></a> <a href="https://github.com/brunoarine/org-similarity/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/brunoarine/org-similarity"></a><br>
+#+BEGIN_SRC html
+<a href="https://github.com/brunoarine/org-similarity/releases"><img alt="Last release" src="https://img.shields.io/github/v/tag/brunoarine/org-similarity"></a> &nbsp; <a href="https://github.com/brunoarine/org-similarity/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/brunoarine/org-similarity"></a><br>
+#+END_SRC
 
 =org-similarity= is a package to help Emacs [[https://orgmode.org][org-mode]] users (re)discover similar documents in relation to the current buffer or to an input query using semantic textual similarity algorithms.
 
