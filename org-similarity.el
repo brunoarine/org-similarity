@@ -4,7 +4,7 @@
 ;;
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((f "0.20.0") (emacs "26.1"))
 ;; Keywords: python, scikit-learn, tf-idf, similarity, org
 
@@ -40,7 +40,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "0.2"
+(defconst org-similarity-version "0.3"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
