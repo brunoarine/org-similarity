@@ -101,6 +101,9 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; org-roam users might want to change it to `org-roam-directory'.
 (setq org-similarity-directory org-directory)
 
+;; Filename extension to scan for similar text.
+(setq org-similarity-file-extension-pattern "*.org")
+
 ;; The language passed to the Snowball stemmer in the `nltk' package.  The
 ;; following languages are supported: Arabic, Danish, Dutch, English, Finnish,
 ;; French, German, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian,

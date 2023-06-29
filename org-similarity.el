@@ -40,7 +40,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "0.2"
+(defconst org-similarity-version "1.0"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
@@ -71,6 +71,11 @@
 (defcustom org-similarity-directory
   "~/org"
   "Directory to scan for possibly similar documents."
+  :type 'string)
+
+(defcustom org-similarity-file-extension-pattern
+  "*.org"
+  "Filename extension to search for similar texts."
   :type 'string)
 
 (defcustom org-similarity-show-scores
@@ -117,13 +122,17 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   (or org-similarity-custom-python-interpreter
       (concat org-similarity--package-path "venv/bin/python")))
 
-(defvar org-similarity-deps-install-buffer-name
+(defvar org-similarity--deps-install-buffer-name
   " *Install org-similarity Python dependencies* "
   "Name of the buffer used for installing org-similarity dependencies.")
 
+(defvar org-similarity--findlike-pkg-version
+  "findlike==1.2.1"
+  "`findlike' package version to be installed.")
+
 (defun org-similarity--system-python-available-p ()
   "Return t if Python is available in the system."
-  (unless (executable-find "python3")
+  (unless (executable-find "python")
     (error "Org-similarity needs Python to run. Please, install Python"))
   t)
 
@@ -132,16 +141,17 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   (file-exists-p (org-similarity--get-python-interpreter)))
 
 (defun org-similarity--deps-available-p ()
-  "Return t if requirements.txt packages are installed, nil otherwise."
+  "Return t if findlike package is installed, nil otherwise."
   (if (file-exists-p (org-similarity--get-python-interpreter))
-      (zerop (call-process (org-similarity--get-python-interpreter) nil nil nil
-                           (concat org-similarity--package-path "orgsimilarity/check_deps.py"))) nil))
+      (zerop (call-process (org-similarity--get-python-interpreter) nil nil nil "-m" "findlike" "--version")) nil))
+
+(org-similarity--get-python-interpreter)
 
 (defun org-similarity-create-local-venv ()
-  "Create environment and install Python dependencies and main script."
+  "Create environment and install Python dependencies."
   (when (org-similarity--system-python-available-p)
-    (let* ((install-commands (concat (executable-find "python3") " -m venv " org-similarity--package-path "venv"))
-           (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
+    (let* ((install-commands (concat (executable-find "python") " -m venv " org-similarity--package-path "venv"))
+           (buffer (get-buffer-create org-similarity--deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
       (if (zerop (let
@@ -156,10 +166,9 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
     (let* ((install-commands (concat (org-similarity--get-python-interpreter)
                                      " -m pip install --upgrade pip && "
                                      (org-similarity--get-python-interpreter)
-                                     " -m pip install -r "
-                                     org-similarity--package-path
-                                     "requirements.txt"))
-           (buffer (get-buffer-create org-similarity-deps-install-buffer-name)))
+                                     " -m pip install "
+                                     org-similarity--findlike-pkg-version))
+           (buffer (get-buffer-create org-similarity--deps-install-buffer-name)))
       (pop-to-buffer buffer)
       (compilation-mode)
       (if (zerop (let ((inhibit-read-only t))
@@ -181,9 +190,8 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Run Python routine on FILENAME and return the COMMAND output as string."
   (progn
     (org-similarity--check-interpreter-and-deps-status)
-    (let ((command (format "%s %sorgsimilarity/__main__.py -i %s -d %s -l %s -n %s -a %s -m %s -p '%s' --heading '%s' %s %s %s %s"
+    (let ((command (format "%s -m findlike %s -d %s -l %s -m %s -a %s -c %s -p '%s' -H '%s' %s %s %s"
                            (org-similarity--get-python-interpreter)
-                           org-similarity--package-path
                            filename
                            org-similarity-directory
                            org-similarity-language
@@ -192,10 +200,9 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
                            org-similarity-min-words
                            org-similarity-prefix
                            org-similarity-heading
-                           (if org-similarity-show-scores "--scores" "")
-                           (if org-similarity-recursive-search "--recursive" "")
-                           (if org-similarity-remove-first "--remove-first" "")
-                           (if org-similarity-use-id-links "--id-links" ""))))
+                           (if org-similarity-show-scores "-s" "")
+                           (if org-similarity-recursive-search "-R" "")
+                           (if org-similarity-remove-first "-h" ""))))
       (shell-command-to-string command))))
 
 (defun org-similarity--save-buffer-to-temp ()
