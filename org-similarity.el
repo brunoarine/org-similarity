@@ -269,7 +269,7 @@ Use ID property instead of file path if USE-ID is non-nil."
   (if (and (file-exists-p filename)
            (string= (file-name-extension filename) "org"))
       (let ((title (org-similarity--get-org-title filename))
-            (id (org-similarity--get-org-id filename)))
+            (id (string-trim-left (org-similarity--get-org-id filename))))
         (if (and use-id id)
             (format "[[id:%s][%s]]" id title)
           (format "[[%s][%s]]" filename title)))
