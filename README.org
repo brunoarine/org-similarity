@@ -13,8 +13,6 @@
   - [[#loading-the-package][Loading the package]]
   - [[#usage][Usage]]
   - [[#configuration][Configuration]]
-  - [[#benchmarking][Benchmarking]]
-  - [[#changelog][Changelog]]
 
 ** Introduction
 
@@ -164,4 +162,10 @@ There are a few variables that can be set to customize how =org-similarity= oper
 ;; item into org headings, or "- " to turn them into an unordered org list.
 ;; Set the variable to "" to hide prefixes.
 (setq org-similarity-prefix "- ")
+
+;; Ignore org front-matter when calculating similarity scores.  This option can
+;; be useful if you think the results are inappropriately biased due to the
+;; presence of some values in the the Org files' Properties drawer, like
+;; filetags or categories.
+(setq org-similarity-ignore-frontmatter nil)
 #+end_src
