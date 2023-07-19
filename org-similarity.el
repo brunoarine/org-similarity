@@ -5,7 +5,7 @@
 ;; Author: Bruno Arine <bruno.arine@runbox.com>
 ;; URL: https://github.com/brunoarine/org-similarity
 
-;; Version: 2.2.0
+;; Version: 2.2.1
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: matching, outlines, wp, org
 
@@ -44,7 +44,7 @@
   :link '(url-link :tag "GitHub" "https://github.com/brunoarine/org-similarity")
   :link '(emacs-commentary-link :tag "Commentary" "org-similarity"))
 
-(defconst org-similarity-version "2.2.0"
+(defconst org-similarity-version "2.2.1"
   "The current version of ORG-SIMILARITY.")
 
 (defcustom org-similarity-language
@@ -149,7 +149,7 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Name of the buffer used for installing org-similarity dependencies.")
 
 (defvar org-similarity--findlike-pkg-version
-  "findlike==1.4.1"
+  "findlike==1.4.2"
   "`findlike' package version to be installed.")
 
 (defun org-similarity--system-python-available-p ()
