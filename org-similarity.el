@@ -305,9 +305,7 @@ Use ID property instead of file path if USE-ID is non-nil."
                  (inhibit-same-window . t)
                  (side . right)
                  (window-width . 0.33)))
-  (let* ((org-similarity-heading "Similarity results\n")
-         (org-similarity-prefix "")
-         (results (org-similarity--run-command filename))
+  (let* ((results (org-similarity--run-command filename))
          (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
     (with-output-to-temp-buffer "*Similarity Results*"
       (princ formatted-results))
