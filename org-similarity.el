@@ -129,9 +129,19 @@ If nul, org-similarity will use a venv inside `emacs-local-directory'."
   "Items prefix in the similarity list when inserted in the current buffer."
   :type 'string)
 
+(defcustom org-similarity-prefix-sidebuffer
+  ""
+  "Items prefix in the similarity list when shown in sidebuffer."
+  :type 'string)
+
 (defcustom org-similarity-heading
   "** Related notes"
   "Text to add before the inserted list."
+  :type 'string)
+
+(defcustom org-similarity-heading-sidebuffer
+  "Similarity results\n"
+  "Text to add before the inserted list in sidebuffer."
   :type 'string)
 
 (defvar org-similarity--package-path
@@ -305,8 +315,8 @@ Use ID property instead of file path if USE-ID is non-nil."
                  (inhibit-same-window . t)
                  (side . right)
                  (window-width . 0.33)))
-  (let* ((org-similarity-heading "Similarity results\n")
-         (org-similarity-prefix "")
+  (let* ((org-similarity-heading org-similarity-heading-sidebuffer)
+         (org-similarity-prefix org-similarity-prefix-sidebuffer)
          (results (org-similarity--run-command filename))
          (formatted-results (org-similarity--format-pairs (org-similarity--parse-json-string results))))
     (with-output-to-temp-buffer "*Similarity Results*"
